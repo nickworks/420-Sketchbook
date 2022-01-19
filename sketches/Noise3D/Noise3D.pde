@@ -23,7 +23,7 @@ void generateTerrainData() {
   for (int x = 0; x < dimOfBlocks; x++) {
     for (int y = 0; y < dimOfBlocks; y++) {
       for (int z = 0; z < dimOfBlocks; z++) {
-        data[x][y][z] = noise(x/zoom, y/zoom, z/zoom) + y / 10.0;
+        data[x][y][z] = noise(x/zoom, y/zoom, z/zoom) + y / 100.0;
       }
     }
   }
@@ -82,7 +82,9 @@ void draw() {
   translate(width/2, height/2);
   rotateX(map(mouseY, 0, height, -1, 1));
   rotateY(map(mouseX, 0, width, -PI, PI));
-  translate(-dimOfBlocks * sizeOfBlocks / 2, -dimOfBlocks * sizeOfBlocks / 2);
+  
+  float d = -dimOfBlocks * sizeOfBlocks / 2;
+  translate(d,d,d);
   
   for(PVector pos : blox){
     pushMatrix();
