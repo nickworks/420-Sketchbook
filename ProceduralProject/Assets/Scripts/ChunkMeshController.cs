@@ -2,27 +2,48 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+[RequireComponent(typeof(MeshCollider))]
 [RequireComponent(typeof(MeshFilter))] // tells Unity to require a MeshFilter on any objects w/ ChunkMeshController
 public class ChunkMeshController : MonoBehaviour
 {
 
+    public enum BlendMode {
+        Average,
+        Add,
+        Mult,
+        Div,
+        Sub
+    }
+
+    [System.Serializable]
+    public class NoiseField {
+        public bool isOn = true;
+        public BlendMode blendMode;
+        public Vector3 offset;
+        [Range(5, 50)]
+        public float zoom = 20;
+        [Range(0, 1)]
+        public float flattenAmount = 0;
+        [Range(-50, 50)]
+        public float flattenOffset = 0;
+    }
+
     [Range(4, 40)]
     public int resolution = 10;
-
-    [Range(5, 50)]
-    public float zoom = 10;
 
     [Range(0, 1)]
     public float densityThreshold = 0.5f;
 
-    private MeshFilter meshFilter;
+    public NoiseField[] fields;
 
+    private MeshFilter meshFilter;
+    private MeshCollider meshCollider;
 
     void Start()
     {
 
         meshFilter = GetComponent<MeshFilter>();
-
+        meshCollider = GetComponent<MeshCollider>();
     }
 
     private void OnValidate() {
@@ -40,7 +61,33 @@ public class ChunkMeshController : MonoBehaviour
                 for (int z = 0; z < voxels.GetLength(2); z++) {
 
                     Vector3 pos = new Vector3(x, y, z);
-                    float density = Noise.Perlin(pos / zoom);
+
+                    float density = 0;
+
+                    foreach(NoiseField field in fields) {
+
+                        Vector3 noisePos = (pos + transform.position) / field.zoom + field.offset;
+                        float d = Noise.Perlin(noisePos);
+                        d -= ((y + field.flattenOffset) / 100f) * field.flattenAmount;
+
+                        switch (field.blendMode) {
+                            case BlendMode.Average:
+                                density = (density + d) / 2;
+                                break;
+                            case BlendMode.Add:
+                                density += d;
+                                break;
+                            case BlendMode.Mult:
+                                density *= d;
+                                break;
+                            case BlendMode.Div:
+                                density /= d;
+                                break;
+                            case BlendMode.Sub:
+                                density -= d;
+                                break;
+                        }
+                    }                   
 
                     voxels[x, y, z] = (density > densityThreshold);
                 }
@@ -85,7 +132,10 @@ public class ChunkMeshController : MonoBehaviour
         mesh.uv = uvs.ToArray();
 
         if(!meshFilter) meshFilter = GetComponent<MeshFilter>();
+        if (!meshCollider) meshCollider = GetComponent<MeshCollider>();
+
         meshFilter.mesh = mesh;
+        meshCollider.sharedMesh = mesh;
     }
     bool Lookup(bool[,,] arr, int x, int y, int z) {
 
