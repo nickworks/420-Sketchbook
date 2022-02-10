@@ -4,43 +4,44 @@ using UnityEngine;
 
 public static class MeshTools
 {
+    
+    /// <summary>
+    /// This class stores multiple mesh instance lists. Having multiple lists
+    /// allows us to keep the instances separated by submesh. This way the final
+    /// output can support having multiple material channels.
+    /// </summary>
+    public class MeshBuilder {
+        private Dictionary<int, List<CombineInstance>> instances = new Dictionary<int, List<CombineInstance>>();
+        public void AddMesh(Mesh mesh, Matrix4x4 xform, int submesh = 0) {
+            if (!instances.ContainsKey(submesh)) instances.Add(submesh, new List<CombineInstance>());
+            instances[submesh].Add(new CombineInstance() { mesh = mesh, transform = xform });
+        }
 
-    public static Mesh MakeQuad(float s = 1) {
-
-        List<Vector3> verts = new List<Vector3>();
-        List<Vector2> uvs = new List<Vector2>();
-        List<Vector3> normals = new List<Vector3>();
-        List<int> tris = new List<int>();
-
-        s /= 2;
-
-        verts.Add(new Vector3(-s, 0, -s));
-        verts.Add(new Vector3(-s, 0, +s));
-        verts.Add(new Vector3(+s, 0, +s));
-        verts.Add(new Vector3(+s, 0, -s));
-        normals.Add(new Vector3(0, +1, 0));
-        normals.Add(new Vector3(0, +1, 0));
-        normals.Add(new Vector3(0, +1, 0));
-        normals.Add(new Vector3(0, +1, 0));
-        uvs.Add(new Vector2(0, 0));
-        uvs.Add(new Vector2(0, 1));
-        uvs.Add(new Vector2(1, 1));
-        uvs.Add(new Vector2(1, 0));
-        tris.Add(0);
-        tris.Add(1);
-        tris.Add(2);
-        tris.Add(2);
-        tris.Add(3);
-        tris.Add(0);
-
-        Mesh mesh = new Mesh();
-        mesh.SetVertices(verts);
-        mesh.SetUVs(0, uvs);
-        mesh.SetNormals(normals);
-        mesh.SetTriangles(tris, 0);
-        return mesh;
+        public Mesh CombineAll() {
+            List<Mesh> meshes = new List<Mesh>();
+            foreach (KeyValuePair<int, List<CombineInstance>> pair in instances) {
+                meshes.Add(MeshTools.MeshFromInstanceList(pair.Value));
+            }
+            return MeshTools.MeshFromMeshes(meshes.ToArray());
+        }
     }
 
+    public static Mesh MeshFromInstanceList(List<CombineInstance> list, bool mergeSubmeshes = true) {
+        Mesh mesh = new Mesh();
+        mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+        mesh.CombineMeshes(list.ToArray(), mergeSubmeshes);
+        return mesh;
+    }
+    public static Mesh MeshFromMeshes(Mesh[] meshes, bool mergeSubmeshes = false) {
+
+        List<CombineInstance> list = new List<CombineInstance>();
+        foreach (Mesh m in meshes) list.Add(new CombineInstance() { mesh = m, transform = Matrix4x4.identity });
+
+        Mesh finalMesh = new Mesh();
+        finalMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+        finalMesh.CombineMeshes(list.ToArray(), mergeSubmeshes);
+        return finalMesh;
+    }
 
     public static Mesh MakeLeaf(float s = 1) {
 
@@ -69,6 +70,42 @@ public static class MeshTools
         tris.Add(1);
         tris.Add(2);
         tris.Add(3);
+
+        Mesh mesh = new Mesh();
+        mesh.SetVertices(verts);
+        mesh.SetUVs(0, uvs);
+        mesh.SetNormals(normals);
+        mesh.SetTriangles(tris, 0);
+        return mesh;
+    }
+
+    public static Mesh MakeQuad(float s = 1) {
+
+        List<Vector3> verts = new List<Vector3>();
+        List<Vector2> uvs = new List<Vector2>();
+        List<Vector3> normals = new List<Vector3>();
+        List<int> tris = new List<int>();
+
+        s /= 2;
+
+        verts.Add(new Vector3(-s, 0, -s));
+        verts.Add(new Vector3(-s, 0, +s));
+        verts.Add(new Vector3(+s, 0, +s));
+        verts.Add(new Vector3(+s, 0, -s));
+        normals.Add(new Vector3(0, +1, 0));
+        normals.Add(new Vector3(0, +1, 0));
+        normals.Add(new Vector3(0, +1, 0));
+        normals.Add(new Vector3(0, +1, 0));
+        uvs.Add(new Vector2(0, 0));
+        uvs.Add(new Vector2(0, 1));
+        uvs.Add(new Vector2(1, 1));
+        uvs.Add(new Vector2(1, 0));
+        tris.Add(0);
+        tris.Add(1);
+        tris.Add(2);
+        tris.Add(2);
+        tris.Add(3);
+        tris.Add(0);
 
         Mesh mesh = new Mesh();
         mesh.SetVertices(verts);

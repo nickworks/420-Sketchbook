@@ -16,52 +16,48 @@ public enum NodeType {
     Leaf,
     Flower
 }
-public class InstanceCollection {
-    List<CombineInstance> branchInstances = new List<CombineInstance>();
-    List<CombineInstance> leafInstances = new List<CombineInstance>();
-    public void AddBranch(Mesh mesh, Matrix4x4 xform) {
-        branchInstances.Add(new CombineInstance() { mesh = mesh, transform = xform });
-    }
-    public void AddLeaf(Mesh mesh, Matrix4x4 xform) {
-        leafInstances.Add(new CombineInstance() { mesh = mesh, transform = xform });
-    }
-    /// <summary>
-    /// Why go through all of the trouble? To have multiple material references, but no more than we need.
-    /// </summary>
-    /// <returns></returns>
-    public Mesh MakeMultiMesh() {
-        
-        Mesh branchMesh = new Mesh();
-        branchMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
-        branchMesh.CombineMeshes(branchInstances.ToArray());
-
-
-        Mesh leafMesh = new Mesh();
-        leafMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
-        leafMesh.CombineMeshes(leafInstances.ToArray());
-
-
-        Mesh finalMesh = new Mesh();
-        finalMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
-        finalMesh.CombineMeshes(new CombineInstance[] {
-            new CombineInstance(){ mesh = branchMesh, transform = Matrix4x4.identity },
-            new CombineInstance(){ mesh = leafMesh, transform = Matrix4x4.identity }
-        }, false);
-
-        return finalMesh;
-    }
-}
 
 [RequireComponent(typeof(MeshFilter))]
 [RequireComponent(typeof(MeshRenderer))]
 public class PlantDemo2 : MonoBehaviour
 {
-
+    [Header("Plant Settings")]
     [Range(0, 100000000)]
     public int seed = 0;
 
     [Range(2, 30)]
     public int iterations = 5;
+
+    [Range(.1f, .5f)]
+    public float limitSmallGeometry = .3f;
+
+    [Header("Branch Settings")]
+
+    [Range(0, 10)]
+    public int trunkSize = 2;
+
+    [Range(1, 10)]
+    public int segmentsBetweenNodes = 2;
+
+    public BranchingStyle branching;
+
+    [Range(0, 1)]
+    public float thicknessBase = .5f;
+
+    [Range(0, 1)]
+    public float thicknessTop = .25f;
+
+    [Range(0, 1)]
+    public float parentAlignBase = .5f;
+
+    [Range(0, 1)]
+    public float parentAlignTop = .25f;
+
+    [Range(-1, 1)]
+    public float turnUpwardsBase = .5f;
+
+    [Range(-1, 1)]
+    public float turnUpwardsTop = -.5f;
 
     [Range(0, 45)]
     public float turnDegrees = 10;
@@ -69,26 +65,14 @@ public class PlantDemo2 : MonoBehaviour
     [Range(0, 45)]
     public float twistDegrees = 10;
 
-    [Range(.1f, .5f)]
-    public float limitSmallGeometry = .3f;
-
+    
+    [Header("Leaf Settings")]
     [Range(1, 10)]
     public float leafSize = 1;
-
-    public BranchingStyle branching;
-
-    [Range(1, 10)]
-    public int nodeDistance = 2;
-
-    [Range(0, 10)]
-    public int trunkNodes = 2;
 
     [Range(0, 1)]
     public float chanceOfLeaf;
 
-    public AnimationCurve curveThickness;
-    public AnimationCurve curveAlignWithParent;
-    public AnimationCurve curveTurnUpwards;
 
     private System.Random randGenerator;
 
@@ -105,19 +89,19 @@ public class PlantDemo2 : MonoBehaviour
         randGenerator = new System.Random(seed);
 
         // 1. making storage for instances:
-        InstanceCollection instances = new InstanceCollection();
+        MeshTools.MeshBuilder meshBuilder = new MeshTools.MeshBuilder();
 
         // 2. spawn the instances
 
-        Grow(NodeType.Branch, instances, Vector3.zero, Quaternion.identity, Vector3.one, iterations);
+        Grow(NodeType.Branch, meshBuilder, Vector3.zero, Quaternion.identity, Vector3.one, iterations);
 
         // 3. combining the instances together:
 
         MeshFilter meshFilter = GetComponent<MeshFilter>();
-        if (meshFilter) meshFilter.mesh = instances.MakeMultiMesh();
+        if (meshFilter) meshFilter.mesh = meshBuilder.CombineAll();
 
     }
-    void Grow(NodeType type, InstanceCollection instances, Vector3 pos, Quaternion rot, Vector3 scale, int max, int num = 0, float nodeSpin = 0, bool allowedSplit = true) {
+    void Grow(NodeType type, MeshTools.MeshBuilder meshBuilder, Vector3 pos, Quaternion rot, Vector3 scale, int max, int num = 0, float nodeSpin = 0, bool allowedSplit = true) {
 
         if (num < 0) num = 0;
         if (num >= max) return; // stop recursion!
@@ -126,15 +110,16 @@ public class PlantDemo2 : MonoBehaviour
 
             // add to num, calc %:
             float percentAtBase = num / (float) max;
-            bool nodeHere = (allowedSplit && num >= trunkNodes && (num-trunkNodes) % nodeDistance == 0);
+            bool nodeHere = (allowedSplit && num >= trunkSize && (num-trunkSize) % segmentsBetweenNodes == 0);
+            if(nodeHere) nodeSpin += GetSpin();
 
             ++num;
 
-            float thickness = curveThickness.Evaluate(percentAtBase);
+            float thickness = Mathf.Lerp(thicknessBase, thicknessTop, (percentAtBase));
 
             // make a cube mesh, add to list:
             Matrix4x4 xform = Matrix4x4.TRS(pos, rot, scale);
-            instances.AddBranch(MeshTools.MakeCube(thickness, 1, thickness), xform);
+            meshBuilder.AddMesh(MeshTools.MakeCube(thickness, 1, thickness), xform, (int)NodeType.Branch);
 
         
             // find the end of the branch:
@@ -146,22 +131,20 @@ public class PlantDemo2 : MonoBehaviour
             
             // if it continued, which way would this branch naturally grow?
             // it inherits its parent's rot, and then turns / twists: 
-            Quaternion randRot = rot * Quaternion.Euler(turnDegrees, twistDegrees, 0);
+            Quaternion newRot = rot * Quaternion.Euler(turnDegrees, twistDegrees, 0);
 
-            // what rotator represents "up"?
-            //Quaternion upRot = Quaternion.RotateTowards(rot, Quaternion.identity);
+            // a version of up that is spun to match the current branch growth
+            Quaternion spunUp = Quaternion.Euler(0,newRot.eulerAngles.y,0);
 
-            // blend between the continued growth and the upwards growth:
-            //Quaternion newRot = Quaternion.Lerp(randRot, upRot, turnUpwards);
-            float amnt = Mathf.Lerp(0, 90, curveTurnUpwards.Evaluate(percentAtBase));
-            Quaternion newRot = Quaternion.RotateTowards(randRot, Quaternion.identity, amnt);
+            // angle the growth up or down:
+            float amnt = Mathf.Lerp(turnUpwardsBase, turnUpwardsTop, percentAtBase);
+            newRot = Quaternion.LerpUnclamped(newRot, spunUp, amnt);
 
             
-            if(nodeHere) nodeSpin += GetSpin();
 
             Grow(
                 NodeType.Branch,
-                instances,
+                meshBuilder,
                 endPoint,
                 newRot,
                 scale * RandBell(.85f, .95f),
@@ -202,12 +185,12 @@ public class PlantDemo2 : MonoBehaviour
                         degreesBetweenSiblings = 120;
                         break;
                 }
-                float split = Mathf.Lerp(90, 0, curveAlignWithParent.Evaluate(percentAtBase));
+                float split = Mathf.Lerp(90, 0, Mathf.Lerp(parentAlignBase, parentAlignTop, percentAtBase));
                 for (int i = 0; i < howMany; i++) {
                     float spin = nodeSpin + degreesBetweenSiblings * i;
                     Quaternion branchDir = rot * Quaternion.Euler(split, spin, 0);
                     float s = RandBell(.5f, .95f);
-                    if (RandBool()) {
+                    if (percentAtBase > Rand()) {
                         if (Rand() < chanceOfLeaf) {
                             whatGrowNext = NodeType.Leaf;
                         } else {
@@ -215,18 +198,15 @@ public class PlantDemo2 : MonoBehaviour
                         }
                     }
 
-                    Grow(whatGrowNext, instances, pos, branchDir, scale * s, max, num - 1, nodeSpin + spinChildren, false);
+                    Grow(whatGrowNext, meshBuilder, pos, branchDir, scale * s, max, num - 1, nodeSpin + spinChildren, false);
                 }
             }
         }
 
 
         if (type == NodeType.Leaf) {
-
-
-            instances.AddLeaf(MeshTools.MakeLeaf(leafSize), Matrix4x4.TRS(pos, rot, scale));
+            meshBuilder.AddMesh(MeshTools.MakeLeaf(leafSize), Matrix4x4.TRS(pos, rot, scale), (int)NodeType.Leaf);
         }
-
     }
     
     private float RandBell(float min, float max) {
