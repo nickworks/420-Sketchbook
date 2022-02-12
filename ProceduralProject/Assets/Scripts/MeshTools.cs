@@ -50,26 +50,36 @@ public static class MeshTools
         List<Vector3> normals = new List<Vector3>();
         List<int> tris = new List<int>();
 
-        s /= 2;
+        float hs = s/2;
 
-        verts.Add(new Vector3(0, 0, 0)); // BL
-        verts.Add(new Vector3(s, 0, 0)); // BR
-        verts.Add(new Vector3(0, s, 0)); // TL
-        verts.Add(new Vector3(s, s, 0)); // TR
+        //    .   .   (-hs, s, 0) (+hs, s, 0)
+        //    .   .   (-hs, hs, 0) (+hs, hs, 0)
+        //      .     (0, 0, 0)
+
+        verts.Add(new Vector3(0, 0, 0));
+        verts.Add(new Vector3(-hs, hs, 0));
+        verts.Add(new Vector3(+hs, hs, 0));
+        verts.Add(new Vector3(-hs, s, +hs));
+        verts.Add(new Vector3(+hs, s, +hs));
         normals.Add(new Vector3(0, 0, -1));
         normals.Add(new Vector3(0, 0, -1));
         normals.Add(new Vector3(0, 0, -1));
         normals.Add(new Vector3(0, 0, -1));
-        uvs.Add(new Vector2(0, 0));
-        uvs.Add(new Vector2(0, 1));
-        uvs.Add(new Vector2(1, 1));
-        uvs.Add(new Vector2(1, 0));
+        normals.Add(new Vector3(0, 0, -1));
+        uvs.Add(new Vector2(0.5f, 1f));
+        uvs.Add(new Vector2(0.0f, 0.5f));
+        uvs.Add(new Vector2(1.0f, 0.5f));
+        uvs.Add(new Vector2(0.0f, 0.0f));
+        uvs.Add(new Vector2(1.0f, 0.0f));
         tris.Add(0);
+        tris.Add(1);
         tris.Add(2);
         tris.Add(1);
-        tris.Add(1);
+        tris.Add(3);
+        tris.Add(2);
         tris.Add(2);
         tris.Add(3);
+        tris.Add(4);
 
         Mesh mesh = new Mesh();
         mesh.SetVertices(verts);

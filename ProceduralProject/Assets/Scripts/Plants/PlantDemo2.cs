@@ -28,18 +28,32 @@ public class PlantDemo2 : MonoBehaviour
     [Range(2, 30)]
     public int iterations = 5;
 
-    [Range(.1f, .5f)]
+    [Range(0f, .5f)]
     public float limitSmallGeometry = .3f;
 
-    [Header("Branch Settings")]
-
+    public BranchingStyle growthStyle = BranchingStyle.AlternateFibonacci;
+    
     [Range(0, 10)]
-    public int trunkSegments = 2;
+    public int trunkSegmentsBeforeNodes = 2;
 
     [Range(1, 10)]
     public int segmentsBetweenNodes = 2;
 
-    public BranchingStyle branching;
+    [Header("Leaf Settings")]
+    [TreeRange(1, 10)]
+    public TreeFloat leafSize = new TreeFloat(1, 10);
+
+    [TreeRange(0, 1)]
+    public TreeFloat chanceOfLeaf = new TreeFloat(0, 1);
+
+    [TreeRange(0, 1)]
+    public TreeFloat leafAlignParent;
+
+    [Header("Branch Settings")]
+
+
+    [TreeRange(0, 1)]
+    public TreeFloat chanceOfNewBranch = new TreeFloat(.5f, 0);
 
     [TreeRange(0, 1)]
     public TreeFloat thickness = new TreeFloat(.2f, 0);
@@ -60,12 +74,6 @@ public class PlantDemo2 : MonoBehaviour
     public TreeFloat twistDegrees;
 
     
-    [Header("Leaf Settings")]
-    [TreeRange(1, 10)]
-    public TreeFloat leafSize = new TreeFloat(1, 10);
-
-    [TreeRange(0, 1)]
-    public TreeFloat chanceOfLeaf = new TreeFloat(0, 1);
 
     private System.Random randGenerator;
 
@@ -105,7 +113,7 @@ public class PlantDemo2 : MonoBehaviour
 
         if (type == NodeType.Branch) {
 
-            bool nodeHere = (allowedSplit && num >= trunkSegments && (num-trunkSegments) % segmentsBetweenNodes == 0);
+            bool nodeHere = (allowedSplit && num >= trunkSegmentsBeforeNodes && (num-trunkSegmentsBeforeNodes) % segmentsBetweenNodes == 0);
             if(nodeHere) nodeSpin += GetSpin();
 
             ++num;
@@ -116,7 +124,6 @@ public class PlantDemo2 : MonoBehaviour
             // make a cube mesh, add to list:
             Matrix4x4 xform = Matrix4x4.TRS(pos, rot, scale);
             meshBuilder.AddMesh(MeshTools.MakeCube(thicc, lngth, thicc), xform, (int)NodeType.Branch);
-
         
             // find the end of the branch:
             Vector3 endPoint = xform.MultiplyPoint(new Vector3(0, lngth, 0));
@@ -148,12 +155,14 @@ public class PlantDemo2 : MonoBehaviour
 
             if (nodeHere) {
 
-                NodeType whatGrowNext = NodeType.Branch;
+
+
+
                 int howMany = 0;
                 float degreesBetweenSiblings = 0;
                 float spinChildren = 0;
 
-                switch (branching) {
+                switch (growthStyle) {
                     case BranchingStyle.Random:
                         howMany = 1;
                         break;
@@ -178,27 +187,39 @@ public class PlantDemo2 : MonoBehaviour
                         degreesBetweenSiblings = 120;
                         break;
                 }
+                NodeType whatGrowNext = NodeType.Leaf;
                 float lean = Mathf.Lerp(90, 0, parentAlign.Lerp(percentAtBase));
                 for (int i = 0; i < howMany; i++) {
-                    float spin = nodeSpin + degreesBetweenSiblings * i;
-                    Quaternion branchDir = rot * Quaternion.Euler(lean, spin, 0);
-                    float s = RandBell(.5f, .95f);
-                    if (percentAtBase > Rand()) {
+                    
+                    if (Rand() <= chanceOfNewBranch.Lerp(percentAtBase)) {
+                        /*
                         if (Rand() < chanceOfLeaf.Lerp(percentAtBase)) {
                             whatGrowNext = NodeType.Leaf;
                         } else {
                             whatGrowNext = NodeType.Flower;
                         }
+                        */
+                        whatGrowNext = NodeType.Branch;
                     }
 
+                    float spin = nodeSpin + degreesBetweenSiblings * i;
+                    Quaternion branchDir = rot * Quaternion.Euler(lean, spin, 0);
+                    float s = RandBell(.5f, .95f);
                     Grow(whatGrowNext, meshBuilder, pos, branchDir, scale * s, max, num - 1, nodeSpin + spinChildren, false);
                 }
             }
         }
 
-
         if (type == NodeType.Leaf) {
-            meshBuilder.AddMesh(MeshTools.MakeLeaf(leafSize.Lerp(percentAtBase)), Matrix4x4.TRS(pos, rot, scale), (int)NodeType.Leaf);
+            // rotate the leaf:
+            float lean = Mathf.Lerp(0, -90, leafAlignParent.Lerp(percentAtBase));
+            Quaternion leafRot = rot * Quaternion.Euler(lean, 0, 0);
+
+            // offset the leafpos by the thickness of the branch:
+            Vector3 leafPos = Matrix4x4.TRS(pos, rot, scale).MultiplyPoint(new Vector3(0, thickness.Lerp(percentAtBase), 0));
+
+            Matrix4x4 leafXform = Matrix4x4.TRS(leafPos, leafRot, scale);
+            meshBuilder.AddMesh(MeshTools.MakeLeaf(leafSize.Lerp(percentAtBase)), leafXform, (int)NodeType.Leaf);
         }
     }
     
@@ -218,7 +239,7 @@ public class PlantDemo2 : MonoBehaviour
     }
     private float GetSpin() {
 
-        switch (branching) {
+        switch (growthStyle) {
             case BranchingStyle.Random:
                 return Rand(0, 360);
             case BranchingStyle.Opposite:
