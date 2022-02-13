@@ -43,43 +43,47 @@ public static class MeshTools
         return finalMesh;
     }
 
-    public static Mesh MakeLeaf(float s = 1) {
+    public static Mesh MakeLeaf(float size = 1, int segments = 1, float curlAmount = 20) {
+
+        if (segments < 1) segments = 1;
+        segments++;
 
         List<Vector3> verts = new List<Vector3>();
         List<Vector2> uvs = new List<Vector2>();
         List<Vector3> normals = new List<Vector3>();
         List<int> tris = new List<int>();
 
-        float hs = s/2;
+        float halfSize = size / 2;
+        float stepSize = size / (segments - 1);
+        float stepUV = 1 / ((float)segments - 1);
+        float curlStep = curlAmount / (segments - 1);
 
-        //    .   .   (-hs, s, 0) (+hs, s, 0)
-        //    .   .   (-hs, hs, 0) (+hs, hs, 0)
-        //      .     (0, 0, 0)
+        for (int i = 0; i < segments; i++) {
 
-        verts.Add(new Vector3(0, 0, 0));
-        verts.Add(new Vector3(-hs, hs, 0));
-        verts.Add(new Vector3(+hs, hs, 0));
-        verts.Add(new Vector3(-hs, s, +hs));
-        verts.Add(new Vector3(+hs, s, +hs));
-        normals.Add(new Vector3(0, 0, -1));
-        normals.Add(new Vector3(0, 0, -1));
-        normals.Add(new Vector3(0, 0, -1));
-        normals.Add(new Vector3(0, 0, -1));
-        normals.Add(new Vector3(0, 0, -1));
-        uvs.Add(new Vector2(0.5f, 1f));
-        uvs.Add(new Vector2(0.0f, 0.5f));
-        uvs.Add(new Vector2(1.0f, 0.5f));
-        uvs.Add(new Vector2(0.0f, 0.0f));
-        uvs.Add(new Vector2(1.0f, 0.0f));
-        tris.Add(0);
-        tris.Add(1);
-        tris.Add(2);
-        tris.Add(1);
-        tris.Add(3);
-        tris.Add(2);
-        tris.Add(2);
-        tris.Add(3);
-        tris.Add(4);
+            float percent = i / (float)(segments);
+
+            Quaternion rot = Quaternion.Euler(curlStep * i, 0, 0);
+
+            int offset = verts.Count;
+            verts.Add(rot * new Vector3(-halfSize, stepSize * i, 0));
+            verts.Add(rot * new Vector3(+halfSize, stepSize * i, 0));
+
+            normals.Add(rot * new Vector3(0, 0, -1));
+            normals.Add(rot * new Vector3(0, 0, -1));
+
+            float v = 1 - stepUV * i;
+            uvs.Add(new Vector2(0.0f, v));
+            uvs.Add(new Vector2(1.0f, v));
+
+            if (i > 0) {
+                tris.Add(offset - 1);
+                tris.Add(offset - 2);
+                tris.Add(offset + 0);
+                tris.Add(offset - 1);
+                tris.Add(offset + 0);
+                tris.Add(offset + 1);
+            }
+        }
 
         Mesh mesh = new Mesh();
         mesh.SetVertices(verts);

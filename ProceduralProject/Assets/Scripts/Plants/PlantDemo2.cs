@@ -28,8 +28,6 @@ public class PlantDemo2 : MonoBehaviour
     [Range(2, 30)]
     public int iterations = 5;
 
-    [Range(0f, .5f)]
-    public float limitSmallGeometry = .3f;
 
     public BranchingStyle growthStyle = BranchingStyle.AlternateFibonacci;
     
@@ -38,16 +36,25 @@ public class PlantDemo2 : MonoBehaviour
 
     [Range(1, 10)]
     public int segmentsBetweenNodes = 2;
-
+    
     [Header("Leaf Settings")]
     [TreeRange(1, 10)]
-    public TreeFloat leafSize = new TreeFloat(1, 10);
+    public TreeFloat leafSizeMult = new TreeFloat(1, 1);
+
+    [TreeRange(.25f, 5)]
+    public TreeFloat leafSizeLimit = new TreeFloat(.25f, .25f);
 
     [TreeRange(0, 1)]
-    public TreeFloat chanceOfLeaf = new TreeFloat(0, 1);
+    public TreeFloat chanceOfLeaf = new TreeFloat(1, 1);
 
     [TreeRange(0, 1)]
     public TreeFloat leafAlignParent;
+
+    [TreeRange(-90, 90)]
+    public TreeFloat leafCurl;
+
+    [Range(1, 10)]
+    public int leafResolution = 2;
 
     [Header("Branch Settings")]
 
@@ -73,7 +80,8 @@ public class PlantDemo2 : MonoBehaviour
     [TreeRange(-45, 45)]
     public TreeFloat twistDegrees;
 
-    
+    [Range(0f, .5f)]
+    public float convertSmallBranchesToLeaves = .3f;
 
     private System.Random randGenerator;
 
@@ -98,128 +106,141 @@ public class PlantDemo2 : MonoBehaviour
         MeshTools.MeshBuilder meshBuilder = new MeshTools.MeshBuilder();
 
         // 2. spawn the instances
-        Grow(NodeType.Branch, meshBuilder, Vector3.zero, Quaternion.identity, Vector3.one, iterations);
+        Grow(NodeType.Branch, meshBuilder, Vector3.zero, Quaternion.identity, 1, iterations);
 
         // 3. combining the instances together:
         meshFilter.mesh = meshBuilder.CombineAll();
 
     }
-    void Grow(NodeType type, MeshTools.MeshBuilder meshBuilder, Vector3 pos, Quaternion rot, Vector3 scale, int max, int num = 0, float nodeSpin = 0, bool allowedSplit = true) {
+    void Grow(NodeType type, MeshTools.MeshBuilder meshBuilder, Vector3 pos, Quaternion rot, float scale = 1, int max = 1, int num = 0, float nodeSpin = 0, bool allowedSplit = true) {
 
         if (num < 0) num = 0;
         if (num >= max) return; // stop recursion!
         // add to num, calc %:
         float percentAtBase = num / (float) max;
+        Matrix4x4 xform = Matrix4x4.TRS(pos, rot, Vector3.one * scale);
 
         if (type == NodeType.Branch) {
 
-            bool nodeHere = (allowedSplit && num >= trunkSegmentsBeforeNodes && (num-trunkSegmentsBeforeNodes) % segmentsBetweenNodes == 0);
-            if(nodeHere) nodeSpin += GetSpin();
+            bool nodeHere = (allowedSplit && num >= trunkSegmentsBeforeNodes && (num - trunkSegmentsBeforeNodes) % segmentsBetweenNodes == 0);
+            if (nodeHere) nodeSpin += GetSpin();
 
             ++num;
 
             float thicc = thickness.Lerp(percentAtBase);
             float lngth = length.Lerp(percentAtBase);
 
-            // make a cube mesh, add to list:
-            Matrix4x4 xform = Matrix4x4.TRS(pos, rot, scale);
-            meshBuilder.AddMesh(MeshTools.MakeCube(thicc, lngth, thicc), xform, (int)NodeType.Branch);
-        
             // find the end of the branch:
             Vector3 endPoint = xform.MultiplyPoint(new Vector3(0, lngth, 0));
 
-            if ((pos - endPoint).sqrMagnitude < limitSmallGeometry * limitSmallGeometry) return; // too small, stop recursion!
+            if ((pos - endPoint).sqrMagnitude < convertSmallBranchesToLeaves * convertSmallBranchesToLeaves) {
 
-            // continue calculating this branch's rotation:
-            
-            // which way would this branch naturally grow?
-            // it inherits its parent's rot, and then turns / twists: 
-            Quaternion newRot = rot * Quaternion.Euler(turnDegrees.Lerp(percentAtBase), twistDegrees.Lerp(percentAtBase), 0);
+                // grow a leaf instead...
+                type = NodeType.Leaf;
 
-            // create a version of "up" that is spun to match the current branch growth
-            Quaternion spunUp = Quaternion.Euler(0,newRot.eulerAngles.y,0);
-
-            // angle the growth up or down:
-            newRot = Quaternion.LerpUnclamped(newRot, spunUp, turnUpwards.Lerp(percentAtBase));
-
-            Grow(
-                NodeType.Branch,
-                meshBuilder,
-                endPoint,
-                newRot,
-                scale * RandBell(.85f, .95f),
-                max,
-                num,
-                nodeSpin);
+            } else {
 
 
-            if (nodeHere) {
+                // make a cube mesh, add to list:
+                meshBuilder.AddMesh(MeshTools.MakeCube(thicc, lngth, thicc), xform, (int)NodeType.Branch);
+
+                // calculate next branch's rotation:
+
+                // which way would this branch naturally grow?
+                // it inherits its parent's rot, and then turns / twists: 
+                Quaternion newRot = rot * Quaternion.Euler(turnDegrees.Lerp(percentAtBase), twistDegrees.Lerp(percentAtBase), 0);
+
+
+                // create a version of "up" that is spun to match the current branch growth
+                Quaternion spunUp = Quaternion.Euler(0, newRot.eulerAngles.y, 0);
 
 
 
+                // angle the growth up or down:
+                newRot = Quaternion.LerpUnclamped(newRot, spunUp, turnUpwards.Lerp(percentAtBase));
 
-                int howMany = 0;
-                float degreesBetweenSiblings = 0;
-                float spinChildren = 0;
+                Grow(
+                    NodeType.Branch,
+                    meshBuilder,
+                    endPoint,
+                    newRot,
+                    scale * RandBell(.85f, .95f),
+                    max,
+                    num,
+                    nodeSpin);
 
-                switch (growthStyle) {
-                    case BranchingStyle.Random:
-                        howMany = 1;
-                        break;
-                    case BranchingStyle.Opposite:
-                        howMany = 2;
-                        degreesBetweenSiblings = 180;
-                        break;
-                    case BranchingStyle.AlternateDistichous:
-                        howMany = 1;
-                        break;
-                    case BranchingStyle.AlternateFibonacci:
-                        howMany = 1;
-                        degreesBetweenSiblings = 180;
-                        break;
-                    case BranchingStyle.WhorledDecussate:
-                        howMany = 2;
-                        degreesBetweenSiblings = 180;
-                        spinChildren = 90;
-                        break;
-                    case BranchingStyle.WhorledTricussate:
-                        howMany = 3;
-                        degreesBetweenSiblings = 120;
-                        break;
-                }
-                NodeType whatGrowNext = NodeType.Leaf;
-                float lean = Mathf.Lerp(90, 0, parentAlign.Lerp(percentAtBase));
-                for (int i = 0; i < howMany; i++) {
-                    
-                    if (Rand() <= chanceOfNewBranch.Lerp(percentAtBase)) {
-                        /*
-                        if (Rand() < chanceOfLeaf.Lerp(percentAtBase)) {
-                            whatGrowNext = NodeType.Leaf;
-                        } else {
-                            whatGrowNext = NodeType.Flower;
-                        }
-                        */
-                        whatGrowNext = NodeType.Branch;
+
+                if (nodeHere) {
+
+                    int howMany = 0;
+                    float degreesBetweenSiblings = 0;
+                    float spinChildren = 0;
+
+                    switch (growthStyle) {
+                        case BranchingStyle.Random:
+                            howMany = 1;
+                            break;
+                        case BranchingStyle.Opposite:
+                            howMany = 2;
+                            degreesBetweenSiblings = 180;
+                            break;
+                        case BranchingStyle.AlternateDistichous:
+                            howMany = 1;
+                            break;
+                        case BranchingStyle.AlternateFibonacci:
+                            howMany = 1;
+                            degreesBetweenSiblings = 180;
+                            break;
+                        case BranchingStyle.WhorledDecussate:
+                            howMany = 2;
+                            degreesBetweenSiblings = 180;
+                            spinChildren = 90;
+                            break;
+                        case BranchingStyle.WhorledTricussate:
+                            howMany = 3;
+                            degreesBetweenSiblings = 120;
+                            break;
                     }
+                    NodeType whatGrowNext = NodeType.Leaf;
+                    float lean = Mathf.Lerp(90, 0, parentAlign.Lerp(percentAtBase));
+                    for (int i = 0; i < howMany; i++) {
 
-                    float spin = nodeSpin + degreesBetweenSiblings * i;
-                    Quaternion branchDir = rot * Quaternion.Euler(lean, spin, 0);
-                    float s = RandBell(.5f, .95f);
-                    Grow(whatGrowNext, meshBuilder, pos, branchDir, scale * s, max, num - 1, nodeSpin + spinChildren, false);
+                        if (Rand() <= chanceOfNewBranch.Lerp(percentAtBase)) {
+                            whatGrowNext = NodeType.Branch;
+                        }
+
+                        if (whatGrowNext == NodeType.Leaf) lean = 0;
+                        float spin = nodeSpin + degreesBetweenSiblings * i;
+                        Quaternion branchDir = rot * Quaternion.Euler(lean, spin, 0);
+                        float s = RandBell(.5f, .95f);
+                        Grow(whatGrowNext, meshBuilder, pos, branchDir, scale * s, max, num - 1, nodeSpin + spinChildren, false);
+                    }
                 }
             }
         }
 
         if (type == NodeType.Leaf) {
-            // rotate the leaf:
-            float lean = Mathf.Lerp(0, -90, leafAlignParent.Lerp(percentAtBase));
-            Quaternion leafRot = rot * Quaternion.Euler(lean, 0, 0);
 
-            // offset the leafpos by the thickness of the branch:
-            Vector3 leafPos = Matrix4x4.TRS(pos, rot, scale).MultiplyPoint(new Vector3(0, thickness.Lerp(percentAtBase), 0));
+            if (Rand() < chanceOfLeaf.Lerp(percentAtBase)) {
 
-            Matrix4x4 leafXform = Matrix4x4.TRS(leafPos, leafRot, scale);
-            meshBuilder.AddMesh(MeshTools.MakeLeaf(leafSize.Lerp(percentAtBase)), leafXform, (int)NodeType.Leaf);
+                // rotate the leaf:
+                float lean = Mathf.Lerp(90, 0, leafAlignParent.Lerp(percentAtBase));
+                Quaternion leafRot = rot * Quaternion.Euler(lean, 0, 0);
+
+                // offset the leafpos by the thickness of the branch:
+                Vector3 leafPos = xform.MultiplyPoint(new Vector3(0,0,thickness.Lerp(percentAtBase)));
+
+                float size = leafSizeMult.Lerp(percentAtBase) * scale;
+                float maxSize = leafSizeLimit.Lerp(percentAtBase);
+                if (size > maxSize) size = maxSize;
+
+                //float align = Vector3.Dot(leafRot * Vector3.back, Vector3.up) < 1 ? 1 : -1;
+                Matrix4x4 leafXform = Matrix4x4.TRS(leafPos, leafRot, Vector3.one * size);
+                Vector3 worldUp = leafXform.inverse.MultiplyVector(Vector3.up);
+
+
+                meshBuilder.AddMesh(MeshTools.MakeLeaf(1, leafResolution, leafCurl.Lerp(percentAtBase)), leafXform, (int)NodeType.Leaf);
+            }
         }
     }
     

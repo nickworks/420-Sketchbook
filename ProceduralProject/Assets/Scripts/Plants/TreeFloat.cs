@@ -55,9 +55,9 @@ public class TreeRangeDrawer : PropertyDrawer {
 
                 SerializedProperty atBase = property.FindPropertyRelative("atBase");
                 SerializedProperty atTop = property.FindPropertyRelative("atTop");
-                position.xMin += EditorGUIUtility.labelWidth;
+                //position.xMin += EditorGUIUtility.labelWidth;
                 position.height = EditorGUIUtility.singleLineHeight;
-                position.y += EditorGUIUtility.singleLineHeight/2;
+                position.y += EditorGUIUtility.singleLineHeight;
                 atTop.floatValue = EditorGUI.Slider(position, atTop.floatValue, range.min, range.max);
                 position.y += EditorGUIUtility.singleLineHeight;
                 atBase.floatValue = EditorGUI.Slider(position, atBase.floatValue, range.min, range.max);
