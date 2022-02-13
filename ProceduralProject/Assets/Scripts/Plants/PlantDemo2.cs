@@ -25,6 +25,10 @@ public class PlantDemo2 : MonoBehaviour
 {
     [System.Serializable]
     public class PlantSettings : ISerializable{
+
+        [HideInInspector]
+        public string filename = "";
+
         [Header("Plant Settings")]
 
         [Range(0, 100000000)]
@@ -91,12 +95,17 @@ public class PlantDemo2 : MonoBehaviour
 
         }
         public PlantSettings(SerializationInfo info, StreamingContext context) {
-            foreach(System.Reflection.FieldInfo prop in this.GetType().GetFields()) {
-                prop.SetValue(this, info.GetValue(prop.Name, prop.FieldType));
+
+            foreach(SerializationEntry serialized in info) {
+                System.Reflection.FieldInfo property = this.GetType().GetField(serialized.Name);
+
+                if(property != null && serialized.ObjectType == property.FieldType) {
+                    object value = info.GetValue(serialized.Name, serialized.ObjectType);
+                    property.SetValue(this, value);
+                }
             }
         }
         public void GetObjectData(SerializationInfo info, StreamingContext context) {
-
             foreach (System.Reflection.FieldInfo prop in this.GetType().GetFields()) {
                 info.AddValue(prop.Name, prop.GetValue(this));
             }

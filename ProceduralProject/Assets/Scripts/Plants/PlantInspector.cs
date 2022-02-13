@@ -10,17 +10,19 @@ using System.Runtime.Serialization.Formatters.Binary;
 public class PlantInspector : Editor {
 
     string[] filenames = new string[0];
-    
     int currentPresetNum = -1;
+
     private void OnEnable() {
         GetFileNames();
     }
     public override void OnInspectorGUI() {
 
         var plant = (target as PlantDemo2);
-
         EditorGUI.BeginChangeCheck();
+        GUILayout.BeginHorizontal();
+        GUILayout.Label("Load Preset: ");  
         currentPresetNum = EditorGUILayout.Popup(currentPresetNum, filenames);
+        GUILayout.EndHorizontal();
         if (EditorGUI.EndChangeCheck()) {
             LoadPlant(currentPresetNum);
         }
@@ -28,8 +30,9 @@ public class PlantInspector : Editor {
         if (GUILayout.Button("New")) NewPlant();
         if (GUILayout.Button("Save")) Save();
         if (GUILayout.Button("Save As ...")) SaveAs();
-        
         GUILayout.EndHorizontal();
+
+
 
         base.OnInspectorGUI();
     }
@@ -43,7 +46,12 @@ public class PlantInspector : Editor {
             BinaryFormatter bf = new BinaryFormatter();
             object obj = bf.Deserialize(s);
             s.Close();
-            (target as PlantDemo2).Build((PlantDemo2.PlantSettings)obj);
+
+            PlantDemo2.PlantSettings settings = (PlantDemo2.PlantSettings)obj;
+            settings.filename = filenames[index];
+
+            (target as PlantDemo2).Build(settings);
+
 
             //Debug.Log(filenames[index] + " loaded");
 
@@ -71,23 +79,28 @@ public class PlantInspector : Editor {
     private void SaveTo(string path) {
         string filename = Path.GetFileName(path);
         if (path.Length != 0) {
+
+            var plant = (target as PlantDemo2);
+            plant.plantSettings.filename = filename;
+
             Stream s = File.OpenWrite(path);
             BinaryFormatter bf = new BinaryFormatter();
-            bf.Serialize(s, (target as PlantDemo2).plantSettings);
+            bf.Serialize(s, plant.plantSettings);
             s.Close();
 
             //Debug.Log("saved to " + filename);
         }
-        GetFileNames(filename);
+        GetFileNames();
     }
-    private void GetFileNames(string setCurrent = "") {
+    private void GetFileNames() {
 
+        var plant = (target as PlantDemo2);
         string[] longnames = Directory.GetFiles(Application.persistentDataPath, "*.tree");
 
         filenames = new string[longnames.Length];
         for(int i = 0; i < longnames.Length; i++) {
             filenames[i] = Path.GetFileName(longnames[i]);
-            if (filenames[i] == setCurrent) currentPresetNum = i;
+            if (filenames[i] == plant.plantSettings.filename) currentPresetNum = i;
         }
     }
 }
