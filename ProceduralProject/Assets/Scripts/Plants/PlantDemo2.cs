@@ -29,8 +29,6 @@ public class PlantDemo2 : MonoBehaviour
         [HideInInspector]
         public string filename = "";
 
-        [Header("Plant Settings")]
-
         [Range(0, 100000000)]
         public int seed = 0;
 
@@ -45,7 +43,6 @@ public class PlantDemo2 : MonoBehaviour
         [Range(1, 10)]
         public int segmentsBetweenNodes = 2;
 
-        [Header("Leaf Settings")]
         [TreeRange(1, 10)]
         public TreeFloat leafSizeMult = new TreeFloat(1, 1);
 
@@ -63,9 +60,6 @@ public class PlantDemo2 : MonoBehaviour
 
         [Range(1, 10)]
         public int leafResolution = 2;
-
-        [Header("Branch Settings")]
-
 
         [TreeRange(0, 1)]
         public TreeFloat chanceOfNewBranch = new TreeFloat(.5f, 0);
