@@ -2,18 +2,29 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
+using System.Runtime.Serialization;
 
 [System.Serializable]
-public class TreeFloat {
+public class TreeFloat : ISerializable {
     public float atBase = 0;
     public float atTop = 0;
     public TreeFloat(float atBase, float atTop) {
         this.atBase = atBase;
         this.atTop = atTop;
     }
+    public TreeFloat(SerializationInfo info, StreamingContext context) {
+        atBase = info.GetSingle("atBase");
+        atTop = info.GetSingle("atTop");
+    }
+    public void GetObjectData(SerializationInfo info, StreamingContext context) {
+        info.AddValue("atBase", atBase);
+        info.AddValue("atTop", atTop);
+    }
+
     public float Lerp(float p) {
         return Mathf.Lerp(atBase, atTop, p);
     }
+
 } 
 public class TreeRange : PropertyAttribute {
     public float min;
