@@ -14,34 +14,60 @@ public class PlantInspector : Editor {
 
     static int toolbarIndex = 0;
 
+    static string TreeDirectory {
+        get {
+            return Application.persistentDataPath + Path.DirectorySeparatorChar;
+        }
+    }
+
     private void OnEnable() {
+        
         GetFileNames();
     }
     public override void OnInspectorGUI() {
 
-        var plant = (target as PlantDemo2);
-        var obj = new SerializedObject(plant);
-        var prop = obj.FindProperty("plantSettings");
+        // serialized the plant:
+
+        PlantDemo2 plant = (target as PlantDemo2);
+        SerializedObject obj = new SerializedObject(plant);
+
+        // get its PlantSettings:
+
+        SerializedProperty prop = obj.FindProperty("plantSettings");
+
+        // build toolbar:
 
         string[] options = new string[] { "Preset", "Plant Settings", "Branch Growth", "Leaf Growth" };
         toolbarIndex = GUILayout.Toolbar(toolbarIndex, options);
         
+        // draw the panels:
+
         switch (toolbarIndex) {
-            case 0: // preset
+            case 0: // preset settings:
 
                 GUILayout.BeginVertical();
                 EditorGUILayout.Space(20);
-                EditorGUILayout.LabelField("Loaded preset:");
+
+                EditorGUILayout.LabelField("Change preset:");
+
                 EditorGUI.BeginChangeCheck();
                 currentPresetNum = EditorGUILayout.Popup(currentPresetNum, filenames);
                 if (EditorGUI.EndChangeCheck()) {
                     LoadPlant(currentPresetNum);
                 }
                 EditorGUILayout.Space(20);
+                
+                EditorGUILayout.LabelField("Loaded preset: "+prop.FindPropertyRelative("filename").stringValue);
+                
+                if (prop.FindPropertyRelative("isDeprecated").boolValue == true)
+                    EditorGUILayout.LabelField("This file is deprecated, please re-save!");
+
+                EditorGUILayout.Space(20);
                 EditorGUILayout.BeginHorizontal();
                 if (GUILayout.Button("New")) NewPlant();
                 if (GUILayout.Button("Save")) Save();
                 if (GUILayout.Button("Save As ...")) SaveAs();
+                if (GUILayout.Button("Manage")) OpenDir();
                 EditorGUILayout.EndHorizontal();
                 EditorGUILayout.Space(20);
                 GUILayout.EndVertical();
@@ -64,11 +90,12 @@ public class PlantInspector : Editor {
                 EditorGUILayout.PropertyField(prop.FindPropertyRelative("turnUpwards"));
                 EditorGUILayout.PropertyField(prop.FindPropertyRelative("turnDegrees"));
                 EditorGUILayout.PropertyField(prop.FindPropertyRelative("twistDegrees"));
-                EditorGUILayout.PropertyField(prop.FindPropertyRelative("convertSmallBranchesToLeaves"));
+                EditorGUILayout.PropertyField(prop.FindPropertyRelative("pruneSmallerThan"));
                 EditorGUILayout.Space(20);
                 break;
             case 3: // leaf growth:
                 EditorGUILayout.Space(20);
+                EditorGUILayout.PropertyField(prop.FindPropertyRelative("hideLeaves"));
                 EditorGUILayout.PropertyField(prop.FindPropertyRelative("leafSizeMult"));
                 EditorGUILayout.PropertyField(prop.FindPropertyRelative("leafSizeLimit"));
                 EditorGUILayout.PropertyField(prop.FindPropertyRelative("chanceOfLeaf"));
@@ -91,40 +118,42 @@ public class PlantInspector : Editor {
         if (index >= filenames.Length) return;
 
         try {
-            Stream s = File.OpenRead(Application.persistentDataPath + Path.DirectorySeparatorChar + filenames[index]);
+
+            string path = Application.persistentDataPath + Path.DirectorySeparatorChar + filenames[index];
+            //Debug.Log(path);
+            Stream s = File.OpenRead(path);
             BinaryFormatter bf = new BinaryFormatter();
             object obj = bf.Deserialize(s);
             s.Close();
 
-            PlantDemo2.PlantSettings settings = (PlantDemo2.PlantSettings)obj;
+            PlantSettings settings = (PlantSettings)obj;
             settings.filename = filenames[index];
 
             (target as PlantDemo2).Build(settings);
-
-
-            //Debug.Log(filenames[index] + " loaded");
+            //Debug.Log($"{filenames[index]} was loaded");
 
         } catch(System.Exception e) {
             currentPresetNum = -1;
-            Debug.LogError("File couldn't be opened.");
+            Debug.LogError("Plant couldn't be opened.");
         }
     }
     private void NewPlant() {
         currentPresetNum = -1;
-        (target as PlantDemo2).Build(new PlantDemo2.PlantSettings());
+        (target as PlantDemo2).Build(new PlantSettings());
     }
     private void Save() {
         if(currentPresetNum < 0 || currentPresetNum >= filenames.Length) {
             SaveAs();
         } else {
-            string path = Application.persistentDataPath + Path.DirectorySeparatorChar + filenames[currentPresetNum];
+            string path = TreeDirectory + filenames[currentPresetNum];
             SaveTo(path);
         }
     }
     private void SaveAs() {
-        string path = EditorUtility.SaveFilePanel("Save Tree", Application.persistentDataPath, "", "tree");
+        string path = EditorUtility.SaveFilePanel("Save Plant", TreeDirectory, "", "tree");
         if(path.Length != 0) SaveTo(path);
     }
+
     private void SaveTo(string path) {
         string filename = Path.GetFileName(path);
         if (path.Length != 0) {
@@ -137,14 +166,19 @@ public class PlantInspector : Editor {
             bf.Serialize(s, plant.plantSettings);
             s.Close();
 
+            plant.plantSettings.isDeprecated = false;
+
             //Debug.Log("saved to " + filename);
         }
         GetFileNames();
     }
+    private void OpenDir() {
+        System.Diagnostics.Process.Start($"{TreeDirectory}");
+    }
     private void GetFileNames() {
 
         var plant = (target as PlantDemo2);
-        string[] longnames = Directory.GetFiles(Application.persistentDataPath, "*.tree");
+        string[] longnames = Directory.GetFiles(TreeDirectory, "*.tree");
 
         filenames = new string[longnames.Length];
         for(int i = 0; i < longnames.Length; i++) {

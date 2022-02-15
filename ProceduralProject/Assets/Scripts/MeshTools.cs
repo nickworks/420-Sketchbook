@@ -13,7 +13,7 @@ public static class MeshTools
     public class MeshBuilder {
         private Dictionary<int, List<CombineInstance>> instances = new Dictionary<int, List<CombineInstance>>();
         public void AddMesh(Mesh mesh, Matrix4x4 xform, int submesh = 0) {
-            if (!instances.ContainsKey(submesh)) instances.Add(submesh, new List<CombineInstance>());
+            Poke(submesh);
             instances[submesh].Add(new CombineInstance() { mesh = mesh, transform = xform });
         }
 
@@ -23,6 +23,15 @@ public static class MeshTools
                 meshes.Add(MeshTools.MeshFromInstanceList(pair.Value));
             }
             return MeshTools.MeshFromMeshes(meshes.ToArray());
+        }
+        public void Poke(int submesh) {
+            if (!instances.ContainsKey(submesh)) 
+                instances.Add(submesh, new List<CombineInstance>() {
+                    new CombineInstance() {
+                        mesh = MeshTools.MakeQuad(.1f),
+                        transform = Matrix4x4.identity
+                    }
+                });
         }
     }
 

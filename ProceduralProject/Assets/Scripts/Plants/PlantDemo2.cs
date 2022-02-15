@@ -23,88 +23,7 @@ public enum NodeType {
 [RequireComponent(typeof(MeshRenderer))]
 public class PlantDemo2 : MonoBehaviour
 {
-    [System.Serializable]
-    public class PlantSettings : ISerializable{
-
-        [HideInInspector]
-        public string filename = "";
-
-        [Range(0, 100000000)]
-        public int seed = 0;
-
-        [Range(2, 30)]
-        public int iterations = 5;
-
-        public BranchingStyle growthStyle = BranchingStyle.AlternateFibonacci;
-
-        [Range(0, 10)]
-        public int trunkSegmentsBeforeNodes = 2;
-
-        [Range(1, 10)]
-        public int segmentsBetweenNodes = 2;
-
-        [TreeRange(1, 10)]
-        public TreeFloat leafSizeMult = new TreeFloat(1, 1);
-
-        [TreeRange(.25f, 5)]
-        public TreeFloat leafSizeLimit = new TreeFloat(.25f, .25f);
-
-        [TreeRange(0, 1)]
-        public TreeFloat chanceOfLeaf = new TreeFloat(1, 1);
-
-        [TreeRange(0, 1)]
-        public TreeFloat leafAlignParent = new TreeFloat(0.5f, 0.5f);
-
-        [TreeRange(-90, 90)]
-        public TreeFloat leafCurl = new TreeFloat(0, 20);
-
-        [Range(1, 10)]
-        public int leafResolution = 2;
-
-        [TreeRange(0, 1)]
-        public TreeFloat chanceOfNewBranch = new TreeFloat(.5f, 0);
-
-        [TreeRange(0, 1)]
-        public TreeFloat thickness = new TreeFloat(.2f, 0);
-
-        [TreeRange(0, 2)]
-        public TreeFloat length = new TreeFloat(1f, .5f);
-
-        [TreeRange(0f, 1f)]
-        public TreeFloat parentAlign = new TreeFloat(0.25f, 0.75f);
-
-        [TreeRange(-1f, 1f)]
-        public TreeFloat turnUpwards = new TreeFloat(0, 0.5f);
-
-        [TreeRange(-45, 45)]
-        public TreeFloat turnDegrees = new TreeFloat(0, 0);
-
-        [TreeRange(-45, 45)]
-        public TreeFloat twistDegrees = new TreeFloat(0, 0);
-
-        [Range(0f, .5f)]
-        public float convertSmallBranchesToLeaves = .3f;
-
-        public PlantSettings() {
-
-        }
-        public PlantSettings(SerializationInfo info, StreamingContext context) {
-
-            foreach(SerializationEntry serialized in info) {
-                System.Reflection.FieldInfo property = this.GetType().GetField(serialized.Name);
-
-                if(property != null && serialized.ObjectType == property.FieldType) {
-                    object value = info.GetValue(serialized.Name, serialized.ObjectType);
-                    property.SetValue(this, value);
-                }
-            }
-        }
-        public void GetObjectData(SerializationInfo info, StreamingContext context) {
-            foreach (System.Reflection.FieldInfo prop in this.GetType().GetFields()) {
-                info.AddValue(prop.Name, prop.GetValue(this));
-            }
-        }
-    }
+    
     public PlantSettings plantSettings = new PlantSettings();
     private System.Random randGenerator;
 
@@ -130,6 +49,8 @@ public class PlantDemo2 : MonoBehaviour
 
         // 1. making storage for instances:
         MeshTools.MeshBuilder meshBuilder = new MeshTools.MeshBuilder();
+        meshBuilder.Poke((int)NodeType.Branch);
+        meshBuilder.Poke((int)NodeType.Leaf);
 
         // 2. spawn the instances
         Grow(NodeType.Branch, meshBuilder, Vector3.zero, Quaternion.identity, 1, plantSettings.iterations);
@@ -226,15 +147,13 @@ public class PlantDemo2 : MonoBehaviour
                     if (Rand() <= plantSettings.chanceOfNewBranch.Lerp(percentAtBase)) {
                         whatGrowNext = NodeType.Branch;
                     }
-                    if (scale * s < plantSettings.convertSmallBranchesToLeaves) {
+                    if (scale * s < plantSettings.pruneSmallerThan) {
                         whatGrowNext = NodeType.Leaf;
                     }
 
                     if (whatGrowNext == NodeType.Leaf) lean = 0;
                     float spin = nodeSpin + degreesBetweenSiblings * i;
                     Quaternion branchDir = rot * Quaternion.Euler(lean, spin, 0);
-
-
 
                     Grow(whatGrowNext, meshBuilder, pos, branchDir, scale * s, max, num - 1, nodeSpin + spinChildren, false);
                 }
@@ -243,6 +162,8 @@ public class PlantDemo2 : MonoBehaviour
         
 
         if (type == NodeType.Leaf) {
+
+            if (plantSettings.hideLeaves) return;
 
             if (Rand() < plantSettings.chanceOfLeaf.Lerp(percentAtBase)) {
 
