@@ -102,6 +102,10 @@ public static class MeshTools
         return mesh;
     }
 
+    public static Mesh MakeBranch() {
+        return new Mesh();
+    }
+
     public static Mesh MakeQuad(float s = 1) {
 
         List<Vector3> verts = new List<Vector3>();

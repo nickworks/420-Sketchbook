@@ -22,7 +22,11 @@ public class TreeFloat : ISerializable {
     }
 
     public float Lerp(float p) {
-        return Mathf.Lerp(atBase, atTop, p);
+        float res =  Mathf.Lerp(atBase, atTop, p);
+
+        if (res == float.NaN) return 0; //???
+
+        return res;
     }
 
 } 
