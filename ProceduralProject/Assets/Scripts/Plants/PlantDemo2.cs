@@ -15,6 +15,7 @@ public enum BranchingStyle {
     WhorledTricussate
 }
 public enum NodeType {
+    None,
     Branch,
     Leaf,
     Flower
@@ -53,6 +54,7 @@ public class PlantDemo2 : MonoBehaviour
         MeshTools.MeshBuilder meshBuilder = new MeshTools.MeshBuilder();
         meshBuilder.Poke((int)NodeType.Branch);
         meshBuilder.Poke((int)NodeType.Leaf);
+        
 
         // 2. spawn the instances
         GrowFromSeed(meshBuilder);
@@ -99,176 +101,56 @@ public class PlantDemo2 : MonoBehaviour
     }
     void GrowBranch(RecursionCounter counter, MeshTools.MeshBuilder meshBuilder, Vector3 pos, Quaternion rot, float scale) {
 
-        Matrix4x4 xform = Matrix4x4.TRS(pos, rot, Vector3.one * scale);
+        // set the branch thickness:
+        
+        MeshFromSpline.Settings geometrySettings = new MeshFromSpline.Settings();
+        geometrySettings.sides = plantSettings.sides;
+        geometrySettings.radiusStart = plantSettings.thickness.Lerp(counter.PercentAtBase()) * scale;
+        geometrySettings.radiusEnd = plantSettings.thickness.atTop * scale;
+        geometrySettings.radiusCurve = plantSettings.thicknessCurve;
 
-        List<Vector3> spline = new List<Vector3>() { xform.MultiplyPoint(Vector3.zero) }; 
+        // make the spline using recursion:
+        Vector3[] spline = GrowBranchSpline(counter, meshBuilder, pos, rot, scale, 1);
 
-        GrowBranchSpline(counter, spline, meshBuilder, Vector3.zero, Quaternion.identity, 1, 0);
-
-        meshBuilder.AddMesh(MeshFromLine.BuildMesh(spline.ToArray()), xform, (int)NodeType.Branch);
+        // make a mesh from the spline:
+        Mesh mesh = MeshFromSpline.BuildMesh(spline, geometrySettings);
+        meshBuilder.AddMesh(mesh, Matrix4x4.identity, (int)NodeType.Branch);
         
     }
-    void GrowBranchSpline(RecursionCounter counter, List<Vector3> branchSpline, MeshTools.MeshBuilder meshBuilder, Vector3 pos, Quaternion rot, float scale, float nodeSpin = 0, bool allowedSplit = true) {
-
-        if (counter.HasExpired()) return;
-
-
-        bool aboveTrunk = counter.currentStep >= plantSettings.trunkSegmentsBeforeNodes;
-        bool isTimeForNode = (counter.currentStep - plantSettings.trunkSegmentsBeforeNodes) % plantSettings.segmentsBetweenNodes == 0;
-
-        bool nodeHere = (allowedSplit && aboveTrunk && isTimeForNode);
-        if (nodeHere) nodeSpin += GetSpin();
-
-        float percentAtBase = counter.PercentAtBase();
-
-        counter.Grow();
-
-        float thicc = plantSettings.thickness.Lerp(percentAtBase);
-        float lngth = plantSettings.length.Lerp(percentAtBase);
+    Vector3[] GrowBranchSpline(RecursionCounter counter, MeshTools.MeshBuilder meshBuilder, Vector3 pos, Quaternion rot, float scale, float nodeSpin = 0, bool allowedSplit = true) {
 
         Matrix4x4 xform = Matrix4x4.TRS(pos, rot, Vector3.one * scale);
 
-        // find the end of the branch:
-        Vector3 endPoint = xform.MultiplyPoint(new Vector3(0, lngth, 0));
+        List<Vector3> spline = new List<Vector3>() {
+            xform.MultiplyPoint(Vector3.zero)
+        };
+        
+        for (;;) {
 
-        branchSpline.Add(endPoint);
+            if (counter.HasExpired()) break;
 
+            bool aboveTrunk = counter.currentStep >= plantSettings.trunkSegmentsBeforeNodes;
+            bool isTimeForNode = (counter.currentStep - plantSettings.trunkSegmentsBeforeNodes) % plantSettings.segmentsBetweenNodes == 0;
 
-        //if ((pos - endPoint).sqrMagnitude < plantSettings.convertSmallBranchesToLeaves * plantSettings.convertSmallBranchesToLeaves) {
-
-        // make a cube mesh, add to list:
-        //meshBuilder.AddMesh(MeshTools.MakeCube(thicc, lngth, thicc), xform, (int)NodeType.Branch);
-
-        // calculate next branch's rotation:
-
-        // which way would this branch naturally grow?
-        // it inherits its parent's rot, and then turns / twists: 
-
-        float pitch = plantSettings.turnDegrees.Lerp(percentAtBase);
-        float yaw = plantSettings.twistDegrees.Lerp(percentAtBase);
-
-        Debug.Log($"pitch: {pitch} yaw: {yaw} percentAtBase: {percentAtBase}");
-        Quaternion newRot = rot * Quaternion.Euler(pitch, yaw, 0);
-
-        // create a version of "up" that is spun to match the current branch growth
-        Quaternion spunUp = Quaternion.Euler(0, newRot.eulerAngles.y, 0);
-
-        // angle the growth up or down:
-        newRot = Quaternion.LerpUnclamped(newRot, spunUp, plantSettings.turnUpwards.Lerp(percentAtBase));
-
-        GrowBranchSpline(
-            counter,
-            branchSpline,
-            meshBuilder,
-            endPoint,
-            newRot,
-            scale * RandBell(.85f, .95f),
-            nodeSpin);
-
-
-        if (nodeHere && false) {
-
-            int howMany = 0;
-            float degreesBetweenSiblings = 0;
-            float spinChildren = 0;
-
-            switch (plantSettings.growthStyle) {
-                case BranchingStyle.Random:
-                    howMany = 1;
-                    break;
-                case BranchingStyle.Opposite:
-                    howMany = 2;
-                    degreesBetweenSiblings = 180;
-                    break;
-                case BranchingStyle.AlternateDistichous:
-                    howMany = 1;
-                    break;
-                case BranchingStyle.AlternateFibonacci:
-                    howMany = 1;
-                    degreesBetweenSiblings = 180;
-                    break;
-                case BranchingStyle.WhorledDecussate:
-                    howMany = 2;
-                    degreesBetweenSiblings = 180;
-                    spinChildren = 90;
-                    break;
-                case BranchingStyle.WhorledTricussate:
-                    howMany = 3;
-                    degreesBetweenSiblings = 120;
-                    break;
-            }
-            NodeType whatGrowNext = NodeType.Leaf;
-            float lean = Mathf.Lerp(90, 0, plantSettings.parentAlign.Lerp(percentAtBase));
-            for (int i = 0; i < howMany; i++) {
-
-                float s = RandBell(.5f, .95f);
-                if (Rand() <= plantSettings.chanceOfNewBranch.Lerp(percentAtBase)) {
-                    whatGrowNext = NodeType.Branch;
-                }
-                if (scale * s < plantSettings.pruneSmallerThan) {
-                    whatGrowNext = NodeType.Leaf;
-                }
-
-                if (whatGrowNext == NodeType.Leaf) lean = 0;
-                float spin = nodeSpin + degreesBetweenSiblings * i;
-                Quaternion branchDir = rot * Quaternion.Euler(lean, spin, 0);
-
-                //Grow(whatGrowNext, meshBuilder, pos, branchDir, scale * s, max, num - 1, nodeSpin + spinChildren, false);
-            }
-        }
-    }
-
-
-    
-    void Grow(NodeType type, MeshTools.MeshBuilder meshBuilder, Vector3 pos, Quaternion rot, float scale = 1, int max = 1, int num = 0, float nodeSpin = 0, bool allowedSplit = true) {
-
-        if (num < 0) num = 0;
-        if (num >= max) return; // stop recursion!
-        // add to num, calc %:
-        float percentAtBase = num / (float) max;
-        Matrix4x4 xform = Matrix4x4.TRS(pos, rot, Vector3.one * scale);
-
-        if (type == NodeType.Branch) {
-
-            bool nodeHere = (allowedSplit && num >= plantSettings.trunkSegmentsBeforeNodes && (num - plantSettings.trunkSegmentsBeforeNodes) % plantSettings.segmentsBetweenNodes == 0);
+            bool nodeHere = (allowedSplit && aboveTrunk && isTimeForNode);
             if (nodeHere) nodeSpin += GetSpin();
 
-            ++num;
+            float percentAtBase = counter.PercentAtBase();
+            counter.Grow();
 
             float thicc = plantSettings.thickness.Lerp(percentAtBase);
             float lngth = plantSettings.length.Lerp(percentAtBase);
-
+            
+            xform = Matrix4x4.TRS(pos, rot, Vector3.one * scale);
+            
             // find the end of the branch:
             Vector3 endPoint = xform.MultiplyPoint(new Vector3(0, lngth, 0));
 
-            //if ((pos - endPoint).sqrMagnitude < plantSettings.convertSmallBranchesToLeaves * plantSettings.convertSmallBranchesToLeaves) {
+            spline.Add(endPoint);
 
-            // make a cube mesh, add to list:
-            meshBuilder.AddMesh(MeshTools.MakeCube(thicc, lngth, thicc), xform, (int)NodeType.Branch);
+            // make node
 
-            // calculate next branch's rotation:
-
-            // which way would this branch naturally grow?
-            // it inherits its parent's rot, and then turns / twists: 
-            Quaternion newRot = rot * Quaternion.Euler(plantSettings.turnDegrees.Lerp(percentAtBase), plantSettings.twistDegrees.Lerp(percentAtBase), 0);
-
-            // create a version of "up" that is spun to match the current branch growth
-            Quaternion spunUp = Quaternion.Euler(0, newRot.eulerAngles.y, 0);
-
-            // angle the growth up or down:
-            newRot = Quaternion.LerpUnclamped(newRot, spunUp, plantSettings.turnUpwards.Lerp(percentAtBase));
-
-            Grow(
-                NodeType.Branch,
-                meshBuilder,
-                endPoint,
-                newRot,
-                scale * RandBell(.85f, .95f),
-                max,
-                num,
-                nodeSpin);
-
-
+            
             if (nodeHere) {
 
                 int howMany = 0;
@@ -300,54 +182,94 @@ public class PlantDemo2 : MonoBehaviour
                         degreesBetweenSiblings = 120;
                         break;
                 }
-                NodeType whatGrowNext = NodeType.Leaf;
+                NodeType whatGrowNext = NodeType.None;
+
+                if (Rand() <= plantSettings.chanceOfNewBranch.Lerp(percentAtBase)) {
+                    whatGrowNext = NodeType.Branch;
+                } else if(Rand() <= plantSettings.chanceOfLeaf.Lerp(percentAtBase)) {
+                    whatGrowNext = NodeType.Leaf;
+                }
+
+
                 float lean = Mathf.Lerp(90, 0, plantSettings.parentAlign.Lerp(percentAtBase));
                 for (int i = 0; i < howMany; i++) {
 
                     float s = RandBell(.5f, .95f);
-                    if (Rand() <= plantSettings.chanceOfNewBranch.Lerp(percentAtBase)) {
-                        whatGrowNext = NodeType.Branch;
-                    }
+
                     if (scale * s < plantSettings.pruneSmallerThan) {
-                        whatGrowNext = NodeType.Leaf;
+                        if (Rand() <= plantSettings.graftLeafChance.Lerp(percentAtBase)) {
+                            whatGrowNext = NodeType.Leaf;
+                        } else {
+                            whatGrowNext = NodeType.None;
+                        }
                     }
 
                     if (whatGrowNext == NodeType.Leaf) lean = 0;
                     float spin = nodeSpin + degreesBetweenSiblings * i;
                     Quaternion branchDir = rot * Quaternion.Euler(lean, spin, 0);
 
-                    Grow(whatGrowNext, meshBuilder, pos, branchDir, scale * s, max, num - 1, nodeSpin + spinChildren, false);
+                    if (whatGrowNext == NodeType.Branch) {
+                        GrowBranch(counter.Branch(), meshBuilder, endPoint, branchDir, scale * s);
+                    }
+                    else if(whatGrowNext == NodeType.Leaf) {
+                        GrowLeaf(counter, meshBuilder, endPoint, branchDir, scale * s);
+                    }
+
                 }
             }
+
+            // continue branch:
+
+            float pitch = plantSettings.turnDegrees.Lerp(percentAtBase);
+            float yaw = plantSettings.twistDegrees.Lerp(percentAtBase);
+
+            Quaternion newRot = rot * Quaternion.Euler(pitch, yaw, 0);
+            Quaternion spunUp = Quaternion.Euler(0, newRot.eulerAngles.y, 0);
+            rot = Quaternion.LerpUnclamped(newRot, spunUp, plantSettings.turnUpwards.Lerp(percentAtBase));
+            pos = endPoint;
+            scale *= RandBell(.85f, .95f);
         }
 
-        if (type == NodeType.Leaf) {
 
-            if (Rand() < plantSettings.chanceOfLeaf.Lerp(percentAtBase)) {
+        // calculate next branch's rotation:
 
-                // this line should be called after the last Rand()
-                if (plantSettings.hideLeaves) return;
+        // which way would this branch naturally grow?
+        // it inherits its parent's rot, and then turns / twists: 
 
-                // rotate the leaf:
-                float lean = Mathf.Lerp(90, 0, plantSettings.leafAlignParent.Lerp(percentAtBase));
-                Quaternion leafRot = rot * Quaternion.Euler(lean, 0, 0);
+        /*
+        */
+        return spline.ToArray();
+    }
+    void GrowLeaf(RecursionCounter counter, MeshTools.MeshBuilder meshBuilder, Vector3 pos, Quaternion rot, float scale = 1) {
 
-                // offset the leafpos by the thickness of the branch:
-                Vector3 leafPos = xform.MultiplyPoint(new Vector3(0,0, plantSettings.thickness.Lerp(percentAtBase)));
+        float percentAtBase = counter.PercentAtBase();
+        
+        if (Rand() < plantSettings.chanceOfLeaf.Lerp(percentAtBase)) {
 
-                float size = plantSettings.leafSizeMult.Lerp(percentAtBase) * scale;
-                float maxSize = plantSettings.leafSizeLimit.Lerp(percentAtBase);
-                if (size > maxSize) size = maxSize;
+            // this line should be called after the last Rand()
+            if (plantSettings.hideLeaves) return;
 
-                //float align = Vector3.Dot(leafRot * Vector3.back, Vector3.up) < 1 ? 1 : -1;
-                Matrix4x4 leafXform = Matrix4x4.TRS(leafPos, leafRot, Vector3.one * size);
-                Vector3 worldUp = leafXform.inverse.MultiplyVector(Vector3.up);
+            // rotate the leaf:
+            float lean = Mathf.Lerp(90, 0, plantSettings.leafAlignParent.Lerp(percentAtBase));
+            Quaternion leafRot = rot * Quaternion.Euler(lean, 0, 0);
 
-                meshBuilder.AddMesh(MeshTools.MakeLeaf(1, plantSettings.leafResolution, plantSettings.leafCurl.Lerp(percentAtBase)), leafXform, (int)NodeType.Leaf);
-            }
+            Matrix4x4 xform = Matrix4x4.TRS(pos, rot, Vector3.one * scale);
+            // offset the leafpos by the thickness of the branch:
+            Vector3 leafPos = xform.MultiplyPoint(new Vector3(0, 0, plantSettings.thickness.Lerp(percentAtBase)));
+
+            float size = plantSettings.leafSizeMult.Lerp(percentAtBase) * scale;
+            float maxSize = plantSettings.leafSizeLimit.Lerp(percentAtBase);
+            if (size > maxSize) size = maxSize;
+
+            Matrix4x4 leafXform = Matrix4x4.TRS(leafPos, leafRot, Vector3.one * size);
+            Vector3 worldUp = leafXform.inverse.MultiplyVector(Vector3.up);
+
+            Mesh mesh = MeshTools.MakeLeaf(1, plantSettings.leafResolution, plantSettings.leafCurl.Lerp(percentAtBase));
+
+            meshBuilder.AddMesh(mesh, leafXform, (int)NodeType.Leaf);
         }
     }
-    
+
     private float RandBell(float min, float max) {
         min /= 2;
         max /= 2;

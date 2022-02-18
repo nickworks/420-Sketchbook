@@ -83,14 +83,25 @@ public class PlantInspector : Editor {
                 break;
             case 2: // branch growth:
                 EditorGUILayout.Space(20);
-                EditorGUILayout.PropertyField(prop.FindPropertyRelative("chanceOfNewBranch"));
+                EditorGUILayout.LabelField("  ====  Geometry  ====");
+                EditorGUILayout.PropertyField(prop.FindPropertyRelative("sides"));
                 EditorGUILayout.PropertyField(prop.FindPropertyRelative("thickness"));
+                EditorGUILayout.PropertyField(prop.FindPropertyRelative("thicknessCurve"));
                 EditorGUILayout.PropertyField(prop.FindPropertyRelative("length"));
+                EditorGUILayout.Space(20);
+                EditorGUILayout.LabelField("  ====  Branching  ====");
                 EditorGUILayout.PropertyField(prop.FindPropertyRelative("parentAlign"));
+                EditorGUILayout.PropertyField(prop.FindPropertyRelative("chanceOfNewBranch"));
+                EditorGUILayout.Space(20);
+
+                EditorGUILayout.LabelField("  ====  Growth  ====");
                 EditorGUILayout.PropertyField(prop.FindPropertyRelative("turnUpwards"));
                 EditorGUILayout.PropertyField(prop.FindPropertyRelative("turnDegrees"));
                 EditorGUILayout.PropertyField(prop.FindPropertyRelative("twistDegrees"));
+                EditorGUILayout.Space(20);
+                EditorGUILayout.LabelField("  ====  Pruning  ====");
                 EditorGUILayout.PropertyField(prop.FindPropertyRelative("pruneSmallerThan"));
+                EditorGUILayout.PropertyField(prop.FindPropertyRelative("graftLeafChance"));
                 EditorGUILayout.Space(20);
                 break;
             case 3: // leaf growth:

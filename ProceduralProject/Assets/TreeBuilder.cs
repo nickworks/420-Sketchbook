@@ -11,7 +11,7 @@ public class TreeBuilder : MonoBehaviour
         new Vector3(0,6,3)
     };
 
-    public MeshFromLine.Settings settings;
+    public MeshFromSpline.Settings settings;
 
     private void Start() {
         Build();
@@ -21,6 +21,6 @@ public class TreeBuilder : MonoBehaviour
     }
     public void Build() {
 
-        GetComponent<MeshFilter>().mesh = MeshFromLine.BuildMesh(points,settings);
+        GetComponent<MeshFilter>().mesh = MeshFromSpline.BuildMesh(points,settings);
     }
 }

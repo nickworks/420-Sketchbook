@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public static class MeshFromLine {
+public static class MeshFromSpline {
 
     public static Quaternion GetQuaternionFromTo(Vector3 ptFrom, Vector3 ptTo) {
         return Quaternion.FromToRotation(Vector3.right, ptTo - ptFrom);
@@ -12,8 +12,8 @@ public static class MeshFromLine {
     public class Settings {
         [Range(3,12)]
         public int sides = 8;
-        public float radiusMax = 0.5f;
-        public float radiusMin = 0.1f;
+        public float radiusStart = 0.5f;
+        public float radiusEnd = 0.1f;
         public Vector2 scaleUV = new Vector2(1, 1);
         public AnimationCurve radiusCurve = new AnimationCurve(new Keyframe[] { new Keyframe(0, 1), new Keyframe(1, 0) });
     }
@@ -33,7 +33,7 @@ public static class MeshFromLine {
             for (int i = 0; i < points.Length; i++) {
                 float percent = i / (float)(points.Length - 1);
                 percent = settings.radiusCurve.Evaluate(percent);
-                float taperedRadius = Mathf.Lerp(settings.radiusMin, settings.radiusMax, percent);
+                float taperedRadius = Mathf.Lerp(settings.radiusEnd, settings.radiusStart, percent);
 
                 radii[i] = taperedRadius;
             }
@@ -84,6 +84,8 @@ public static class MeshFromLine {
 
 
         Mesh mesh = new Mesh();
+
+
         mesh.vertices = GenerateVertList(output);
         mesh.triangles = GenerateTris(output, mesh.vertices);
         mesh.uv = GenerateUVs(output, mesh.vertices);
@@ -105,6 +107,7 @@ public static class MeshFromLine {
                 k++;
             }
         }
+
         return vertices;
     }
     private static int[] GenerateTris(Output output, Vector3[] verts) {
@@ -164,7 +167,7 @@ public static class MeshFromLine {
         Color[] colors = new Color[verts.Length];
         for (int i = 0; i < colors.Length; i++) {
             float radius = output.radii[i / (output.settings.sides + 1)];
-            float percent = 1 - (radius - output.settings.radiusMin) / (output.settings.radiusMax - output.settings.radiusMin);
+            float percent = 1 - (radius - output.settings.radiusEnd) / (output.settings.radiusStart - output.settings.radiusEnd);
             colors[i] = Color.Lerp(Color.black, Color.white, percent);
         }
         return colors;
