@@ -10,17 +10,17 @@ class Boid {
   
   PVector _dir = new PVector();
   
-  float mass = 20;
-  float speed = 5;
+  float mass = 100;
+  float speed = 10;
   
   float radiusCohesion = 200;
   float radiusAlignment = 100;
-  float radiusSeparation = 50;
+  float radiusSeparation = 200;
   
-  float forceCohesion = 1;
-  float forceAlignment = .25;
+  float forceCohesion = 20000;
+  float forceAlignment = 20000;
   
-  float forceSeparation = 10;
+  float forceSeparation = 200;
   
   Boid(float x, float y){
     position.x = x;
@@ -101,6 +101,17 @@ class Boid {
   }
   void updateAndDraw(){
     
+    float mag = velocity.mag();
+    
+    if(mag > speed){
+      _dir = PVector.div(velocity, mag);
+      velocity.mult(speed/mag);
+      
+    } else {
+      // cache the direction vector:
+      if(mag != 0) _dir = PVector.div(velocity, mag);
+    }
+    
     // euler step:
     PVector acceleration = PVector.div(force, mass); 
     velocity.add(acceleration);
@@ -114,9 +125,11 @@ class Boid {
     if(position.y < 0) position.y += height;
     else if(position.y > height) position.y -= height;
     
-    // cache the direction vector:
-    _dir = PVector.div(velocity, velocity.mag());
     
-    ellipse(position.x, position.y, 10, 10);
+    pushMatrix();
+    translate(position.x, position.y);
+    rotate(_dir.heading());
+    triangle(5, 0, -5, -5, -5, 5);
+    popMatrix();
   }
 }
