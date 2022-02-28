@@ -3,9 +3,9 @@ class Agent {
   PVector position = new PVector();
   PVector velocity = new PVector();
   PVector force = new PVector();
-  float mass = 1;
-  float maxSpeed = 10;
-  float maxForce = 10;  
+  float mass = 10;
+  float maxSpeed = 4;
+  float maxForce = 2;  
   
   PVector target = new PVector();
   float targetAngle = 0;
@@ -33,6 +33,11 @@ class Agent {
     
     doSteeringForce();
     doEuler();
+    if(position.x>width)position.x-=width;
+    else if(position.x<0)position.x+=width;
+    if(position.y>height)position.y-=height;
+    else if(position.y<0)position.y+=height;
+    
   }
   void doSteeringForce(){
     

@@ -4,7 +4,7 @@ ArrayList<Agent> agents = new ArrayList<Agent>();
 FlowfieldGrid grid;
 
 void setup(){
-  size(1000, 800);
+  size(1000, 800, P2D);
 
   grid = new FlowfieldGrid();
 

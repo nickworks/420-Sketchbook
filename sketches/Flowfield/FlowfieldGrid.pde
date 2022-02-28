@@ -1,7 +1,7 @@
 class FlowfieldGrid {
 
   // properties:
-  int res = 10;
+  int res = 50;
   float zoom = 10;
   boolean isHidden = false;
 
@@ -14,10 +14,48 @@ class FlowfieldGrid {
   }
   void build() {
     data = new float[res][res];
+
+    int thresh = 3;
+    float w = getCellWidth();
+    float h = getCellHeight();
+
+    float disThresh = pow(width/2,2);
+
     for (int x = 0; x < data.length; x++) {
       for (int y = 0; y < data[x].length; y++) {
-        float val = noise(x/zoom, y/zoom);
-        val = map(val, 0, 1, -PI * 2, PI * 2);
+        
+        // use perlin noise to generate val
+        float noise = noise(x/zoom, y/zoom);
+        
+        //noise = sin(noise);
+        
+        // map the perlin noise to -180 to +180 degrees
+        float angleNoise = map(noise, .3, .7, -PI, PI);
+
+        // find vector to center of screen:
+        float dy = (height/(float)2) - (y * h + h/2);
+        float dx = (width/(float)2) - (x * w + w/2);
+        
+        // find angle to center:
+        float angleCenter = atan2(dy, dx);
+
+        // find distance to center:
+        float dis = sqrt(dx*dx + dy*dy);
+        float relativeDis = (dis)/(width);
+        relativeDis = constrain(relativeDis, 0, 1);
+        relativeDis = 1 - relativeDis;
+        relativeDis *= relativeDis;
+        relativeDis = 1 - relativeDis;
+        
+        if(angleCenter < angleNoise) angleCenter += TWO_PI;
+        
+        // interpolate final angle:
+        //float val = lerp(angleNoise, angleCenter, relativeDis);
+        float val = lerp(angleCenter+PI, angleCenter-PI, noise-.8);
+        
+        while(val > PI) val -= TWO_PI;
+        while(val <-PI) val += TWO_PI;
+        
         data[x][y] = val;
       }
     }
@@ -57,9 +95,9 @@ class FlowfieldGrid {
   }
 
   void draw() {
-    
-    if(isHidden) return;
-    
+
+    if (isHidden) return;
+
     float w = getCellWidth();
     float h = getCellHeight();
 
@@ -76,12 +114,15 @@ class FlowfieldGrid {
         rotate(val);
 
 
-        float hue = map(val, -PI, PI, 0, 255);
+        float hue = map(val, -PI, PI, 0, 511);
 
-        stroke(255);
-        fill(hue, 255, 255);
-        ellipse(0, 0, 20, 20);
-        line(0, 0, 25, 0);
+        int hu = ((int)hue)%255;
+
+        noStroke();
+        fill(hu, 255, 255);
+        ellipse(0, 0, 15, 15);
+        //stroke(255);
+        //line(0, 0, 25, 0);
 
         popMatrix();
       } // end y loop
