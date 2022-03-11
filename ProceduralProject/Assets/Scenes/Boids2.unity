@@ -199,8 +199,8 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1260615702}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1, z: -10}
+  m_LocalRotation: {x: -0.0999774, y: 0.85375243, z: -0.17823425, w: -0.4788986}
+  m_LocalPosition: {x: 19.494623, y: 9.972953, z: 11.909325}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -330,21 +330,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: acae607556f58425a86077074c44627f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  worldBounds:
+    m_Center: {x: 0, y: 0, z: 0}
+    m_Extent: {x: 10, y: 10, z: 10}
   boidTypes:
   - type: 0
     prefab: {fileID: 5136477870802302067, guid: c2d91bd90638f45b58408a278c8c2e0c, type: 3}
-    limitMin: 5
-    limitMax: 10
-    speed: 1
-    maxForce: 1
+    limitMin: 10
+    limitMax: 9
+    speed: 6.52
+    maxForce: 0.52
     responses:
     - type: 0
       radiusCohesion: 7.82
-      radiusSeparation: 5.23
-      radiusAlignment: 2.14
+      radiusSeparation: 5.06
+      radiusAlignment: 3.05
       forceCohesion: 971
       forceSeparation: 407
-      forceAlignment: 687
+      forceAlignment: 786
 --- !u!4 &2082012276
 Transform:
   m_ObjectHideFlags: 0

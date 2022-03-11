@@ -21,7 +21,7 @@ public class BoidClass {
     [Range(0, 10)]
     public float speed = 1;
 
-    [Range(0,100)]
+    [Range(0,1)]
     public float maxForce = 1;
 
     public BoidRelationshipTo[] responses;
@@ -54,6 +54,7 @@ public class BoidRelationshipTo {
 public class BoidManager : MonoBehaviour
 {
     
+    public Bounds worldBounds;
     public BoidClass[] boidTypes;
     int min = 4;
     
@@ -93,6 +94,26 @@ public class BoidManager : MonoBehaviour
         }
         return new BoidClass();    
     }
+    static public Vector3 WrapToWorld(Vector3 p){
+        if(!singleton) return p;
+        Bounds b = singleton.worldBounds;
+        if(p.x < b.min.x) p.x += b.size.x;
+        else if(p.x > b.max.x) p.x -= b.size.x;
+        if(p.y < b.min.y) p.y += b.size.y;
+        else if(p.y > b.max.y) p.y -= b.size.y;
+        if(p.z < b.min.z) p.z += b.size.z;
+        else if(p.z > b.max.z) p.z -= b.size.z;
+        return p;
+    }
+    static public Vector3 RandomLocation(){
+        if(!singleton) return Vector3.zero;
+        Bounds b = singleton.worldBounds;
+        Vector3 p = Vector3.zero;
+        p.x = Random.Range(b.min.x, b.max.x);
+        p.y = Random.Range(b.min.y, b.max.y);
+        p.z = Random.Range(b.min.z, b.max.z);
+        return p;
+    }
     
     void Start()
     {
@@ -110,7 +131,7 @@ public class BoidManager : MonoBehaviour
         foreach(BoidClass boidType in boidTypes){
             if(HowMany(boidType.type) < boidType.limitMin) {
                 if(boidType.prefab) {
-                    Boid b = Instantiate(boidType.prefab);
+                    Boid b = Instantiate(boidType.prefab, RandomLocation(), Quaternion.identity);
                     b.Init(boidType.type);
                 }
             }
@@ -123,6 +144,8 @@ public class BoidManager : MonoBehaviour
             boids.Clear();
         }
     }
-
+    void OnDrawGizmos(){
+        Gizmos.DrawWireCube(worldBounds.center, worldBounds.extents * 2);
+    }
     
 }

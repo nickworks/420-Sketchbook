@@ -16,23 +16,20 @@ public class Boid : MonoBehaviour
     {
         body = GetComponent<Rigidbody>();
         BoidManager.Add(this);
+        body.AddForce(Random.onUnitSphere * 5, ForceMode.Impulse);
     }
     void OnDestroy(){
         BoidManager.Remove(this);
     }
-    
-    void Update()
-    {
-        
-    }
+
     void LateUpdate(){
         float speed = body.velocity.magnitude;
-        dir = body.velocity / speed;
+        dir = speed > 0 ? body.velocity / speed : transform.forward;
 
         transform.rotation = Quaternion.RotateTowards(
             transform.rotation,
             Quaternion.LookRotation(dir),
-            Time.deltaTime * 90 * speed);
+            Time.deltaTime * 30 * (speed/10));
 
     }
     public void CalcForcesFrom(KeyValuePair<BoidType, List<Boid>> boids){
@@ -55,18 +52,19 @@ public class Boid : MonoBehaviour
             Vector3 dif = boid.transform.position - transform.position;
 
             float dis = dif.magnitude;
-
-            if(dis < response.radiusAlignment){
-                countAlignment++;
-                avgAlign += boid.dir;
-            }
-            if(dis < response.radiusCohesion){
-                countCohesion++;
-                avgCenter += boid.transform.position;
-            }
-            if(dis < response.radiusSeparation){
-                countSeparation++;
-                body.AddForce(-Time.deltaTime * response.forceSeparation * dif/dis/dis);
+            if(dis > 0){
+                if(dis < response.radiusAlignment){
+                    countAlignment++;
+                    avgAlign += boid.dir;
+                }
+                if(dis < response.radiusCohesion){
+                    countCohesion++;
+                    avgCenter += boid.transform.position;
+                }
+                if(dis < response.radiusSeparation){
+                    countSeparation++;
+                    body.AddForce(-Time.deltaTime * response.forceSeparation * dif/dis/dis);
+                }
             }
         }
 
@@ -91,6 +89,6 @@ public class Boid : MonoBehaviour
 
             body.AddForce(Time.deltaTime * response.forceAlignment * force);
         }
-
+        transform.position = BoidManager.WrapToWorld(transform.position);
     }
 }
