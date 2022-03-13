@@ -43,11 +43,11 @@ public class BoidRelationshipTo {
     public float radiusSeparation = 1;
     [Range(0,10)]
     public float radiusAlignment = 2;
-    [Range(0,1000)]
+    [Range(-1000,1000)]
     public float forceCohesion = 2;
-    [Range(0,1000)]
+    [Range(-1000,1000)]
     public float forceSeparation = 1;
-    [Range(0,1000)]
+    [Range(-1000,1000)]
     public float forceAlignment = 2;
 }
 
@@ -131,7 +131,7 @@ public class BoidManager : MonoBehaviour
         foreach(BoidClass boidType in boidTypes){
             if(HowMany(boidType.type) < boidType.limitMin) {
                 if(boidType.prefab) {
-                    Boid b = Instantiate(boidType.prefab, RandomLocation(), Quaternion.identity);
+                    Boid b = Instantiate(boidType.prefab, RandomLocation(), Quaternion.identity, transform);
                     b.Init(boidType.type);
                 }
             }

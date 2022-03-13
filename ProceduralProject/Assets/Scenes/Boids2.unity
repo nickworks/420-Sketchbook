@@ -335,7 +335,7 @@ MonoBehaviour:
     m_Extent: {x: 10, y: 10, z: 10}
   boidTypes:
   - type: 0
-    prefab: {fileID: 5136477870802302067, guid: c2d91bd90638f45b58408a278c8c2e0c, type: 3}
+    prefab: {fileID: 5136477870802302067, guid: 0a35d1b24e3154f40b85144c3b703508, type: 3}
     limitMin: 10
     limitMax: 9
     speed: 6.52
@@ -348,6 +348,27 @@ MonoBehaviour:
       forceCohesion: 971
       forceSeparation: 407
       forceAlignment: 786
+    - type: 1
+      radiusCohesion: 0
+      radiusSeparation: 9.67
+      radiusAlignment: 3.05
+      forceCohesion: -207
+      forceSeparation: 957
+      forceAlignment: 376
+  - type: 1
+    prefab: {fileID: 5136477870802302067, guid: c2d91bd90638f45b58408a278c8c2e0c, type: 3}
+    limitMin: 2
+    limitMax: 9
+    speed: 6.52
+    maxForce: 0.52
+    responses:
+    - type: 0
+      radiusCohesion: 7.82
+      radiusSeparation: 4.12
+      radiusAlignment: 0.15
+      forceCohesion: 971
+      forceSeparation: -624
+      forceAlignment: -899
 --- !u!4 &2082012276
 Transform:
   m_ObjectHideFlags: 0

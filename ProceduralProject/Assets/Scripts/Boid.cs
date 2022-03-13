@@ -11,6 +11,7 @@ public class Boid : MonoBehaviour
     public Vector3 dir { get; private set; }
     public void Init(BoidType t){
         type = t;
+        transform.localScale = Vector3.one * (t == BoidType.Bitty ? .2f : 1.0f);
     }
     void Start()
     {
