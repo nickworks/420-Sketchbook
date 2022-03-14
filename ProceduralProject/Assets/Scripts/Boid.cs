@@ -9,6 +9,8 @@ public class Boid : MonoBehaviour
     public BoidType type { get; private set; }
     public Rigidbody body;
     public Vector3 dir { get; private set; }
+
+    private BoidClass settings;
     public void Init(BoidType t){
         type = t;
         transform.localScale = Vector3.one * (t == BoidType.Bitty ? .2f : 1.0f);
@@ -21,9 +23,20 @@ public class Boid : MonoBehaviour
     }
     void OnDestroy(){
         BoidManager.Remove(this);
+        settings = null;
     }
 
     void LateUpdate(){
+        settings = BoidManager.GetSettings(type);
+
+        Vector3 toCenter = BoidManager.ToCenter(transform.position);
+        float dToCenter = toCenter.magnitude;
+
+        Vector3 desiredSpeed = settings.speed * toCenter/dToCenter;
+        Vector3 forceTurnToCenter = desiredSpeed - body.velocity;
+        if(forceTurnToCenter.sqrMagnitude > settings.maxForce * settings.maxForce) forceTurnToCenter = forceTurnToCenter.normalized * settings.maxForce;
+        body.AddForce(forceTurnToCenter);
+
         float speed = body.velocity.magnitude;
         dir = speed > 0 ? body.velocity / speed : transform.forward;
 
@@ -32,10 +45,11 @@ public class Boid : MonoBehaviour
             Quaternion.LookRotation(dir),
             Time.deltaTime * 30 * (speed/10));
 
+        //transform.position = BoidManager.WrapToWorld(transform.position);
     }
     public void CalcForcesFrom(KeyValuePair<BoidType, List<Boid>> boids){
 
-        BoidClass settings = BoidManager.GetSettings(type);
+        if(settings == null) settings = BoidManager.GetSettings(type);
         BoidRelationshipTo response = settings.GetResponse(boids.Key);
         
         Vector3 avgCenter = new Vector3();
@@ -90,6 +104,6 @@ public class Boid : MonoBehaviour
 
             body.AddForce(Time.deltaTime * response.forceAlignment * force);
         }
-        transform.position = BoidManager.WrapToWorld(transform.position);
+        
     }
 }

@@ -105,6 +105,9 @@ public class BoidManager : MonoBehaviour
         else if(p.z > b.max.z) p.z -= b.size.z;
         return p;
     }
+    static public Vector3 ToCenter(Vector3 from){
+        return singleton.worldBounds.center - from;
+    }
     static public Vector3 RandomLocation(){
         if(!singleton) return Vector3.zero;
         Bounds b = singleton.worldBounds;

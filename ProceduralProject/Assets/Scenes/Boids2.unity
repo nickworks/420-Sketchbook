@@ -369,6 +369,13 @@ MonoBehaviour:
       forceCohesion: 971
       forceSeparation: -624
       forceAlignment: -899
+    - type: 1
+      radiusCohesion: 0.42
+      radiusSeparation: 6.1
+      radiusAlignment: 5.01
+      forceCohesion: 41
+      forceSeparation: 416
+      forceAlignment: 133
 --- !u!4 &2082012276
 Transform:
   m_ObjectHideFlags: 0
