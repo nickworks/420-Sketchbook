@@ -29,6 +29,6 @@ public class Orb : MonoBehaviour
 
         transform.localScale = Vector3.Lerp(transform.localScale, Vector3.zero, .05f);
 
-        body.AddForce(dirToViz * 100 * Time.deltaTime);
+        body.AddForce(dirToViz * 500 * Time.deltaTime);
     }
 }

@@ -134,7 +134,6 @@ GameObject:
   - component: {fileID: 777039059}
   - component: {fileID: 777039058}
   - component: {fileID: 777039057}
-  - component: {fileID: 777039060}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -208,20 +207,6 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &777039060
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 777039056}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0c4445477c68a488e8a3c1aa7bc3c583, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  shader: {fileID: 4800000, guid: 0dc24322f82574009bd6742be0578f2e, type: 3}
-  noiseTexture: {fileID: 2800000, guid: a65b1b5633df94b9d871d46d777ec1e1, type: 3}
 --- !u!1 &922941217
 GameObject:
   m_ObjectHideFlags: 0
@@ -233,8 +218,8 @@ GameObject:
   - component: {fileID: 922941222}
   - component: {fileID: 922941221}
   - component: {fileID: 922941220}
-  - component: {fileID: 922941219}
   - component: {fileID: 922941218}
+  - component: {fileID: 922941223}
   m_Layer: 0
   m_Name: Music Viz
   m_TagString: Untagged
@@ -257,25 +242,6 @@ MonoBehaviour:
   playlist:
   - {fileID: 8300000, guid: 77c3b66e507ba41bb84ef4eeefde5c1f, type: 3}
   - {fileID: 8300000, guid: 1a26b983bf00c4b469f0a8a095992457, type: 3}
---- !u!114 &922941219
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 922941217}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5778ef819ec154f30a9b6ea2b2bfbd92, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  ringRadius: 10
-  ringHeight: 4
-  orbHeight: 10
-  numBands: 128
-  prefabOrb: {fileID: 3665118860448311644, guid: b60196aa87762455ca202e25a43ed0a1, type: 3}
-  ppShader: {fileID: 777039060}
-  avgAmp: 0
 --- !u!120 &922941220
 LineRenderer:
   m_ObjectHideFlags: 0
@@ -486,6 +452,25 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &922941223
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 922941217}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 190273188eb0e4bf39f657582809e824, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ringRadius: 10
+  ringHeight: 4
+  orbHeight: 50
+  numBands: 64
+  prefabOrb: {fileID: 7381156711809638688, guid: 51985252a14164245925061223c77e81, type: 3}
+  ppShader: {fileID: 0}
+  avgAmp: 0
 --- !u!1 &1756599309
 GameObject:
   m_ObjectHideFlags: 0
