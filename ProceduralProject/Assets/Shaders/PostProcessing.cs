@@ -17,7 +17,9 @@ public class PostProcessing : MonoBehaviour
 
         mat.SetTexture("_NoiseTex", noiseTexture);
     }
-
+    public void UpdateAmp(float amp){
+        mat.SetFloat("_Amp", amp);
+    }
     void OnRenderImage(RenderTexture src, RenderTexture dst)
     {
         Graphics.Blit(src, dst, mat);
